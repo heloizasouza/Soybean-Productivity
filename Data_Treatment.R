@@ -21,10 +21,10 @@ soybean_data <- main_data |>
   # transforming categorical variables
   # transformando variáveis categóricas
   mutate_at(vars(Local,Ano,Solo,Cultivar, Textura.do.solo), as.factor) |>
-  #transforming the Date covariates
-  # transformando as covariáveis de Data
-  mutate_at(vars(Plantio), as.Date) |>
-  mutate(Colheita = Plantio+Ciclo)
+  #transforming the Date covariate
+  # transformando a covariável de Data
+  mutate_at(vars(Plantio), as.Date)
+  
 
 # correcting coordinates
 soybean_data <- soybean_data |>
@@ -50,8 +50,18 @@ soybean_data <- soybean_data |>
          |> as.numeric()) |>
   mutate(Longitude = char2dms(from = Longit,chd = "°", chm = "'", chs = "''")
          |> as.numeric())
-  mutate(Longitude = -Longitude)
 
+# correcting planting dates
+# corrigindo as datas de plantio
+soybean_data <- soybean_data |>
+  mutate(Plantio = case_when(
+    Plantio == "2022-01-17" ~ as.Date("2022-11-17"),
+    Plantio == "2021-11-23" ~ as.Date("2022-11-23"),
+    TRUE ~ as.Date(Plantio)),
+    Colheita = Plantio+Ciclo)
 
-  # ajustando os níveis das variáveis categóricas
-  mutate(Ciclo4 = factor(Ciclo4, levels = c("Super Precoce","Precoce","Medio","Tardio")))
+# creating the harvest cycle categorical covariate
+# criando a covariável categórica de ciclo de colheita
+soybean_data <- soybean_data |>
+  mutate(Ciclo4 = cut(x = Ciclo, breaks = c(-Inf, 100, 110, 120, Inf), 
+                      labels = c("Super Precoce","Precoce","Medio","Tardio")))
