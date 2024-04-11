@@ -163,5 +163,104 @@ summary(mod41)
 # summary(mod41)
 
 # mod usando gls - generalized least squares
-mod5 <- gls(model = kgha ~ Grupo, data = soybean_data, weights = varIdent(form = ~1|Cultivar))
-summary(mod5)
+mod5.gls <- gls(model = kgha ~ Grupo, data = soybean_data, weights = varIdent(form = ~1|Cultivar))
+summary(mod5.gls)
+
+
+
+# Teste de Hipótese -------------------------------------------------------
+
+
+# testando os não significantes do mod2
+# id dos coeficientes a serem testados
+coefID <- c(7,10,12,13)
+coefNAM <- names(fixef(mod2)[coefID])
+
+# matriz de contrastes
+Cmatrix <- matrix(0, 4, 13)
+Cmatrix[cbind(1:4,coefID)] <- 1
+rownames(Cmatrix) <- coefNAM
+
+# TESTE DA HIPÓTESE LINEAR GERAL PARA 𝑯𝟎: 𝐂𝜷 = 0
+GLH <-  multcomp::glht(model = mod2, linfct = Cmatrix)
+summary(GLH) # não significativos
+
+
+# testando os não significativos do mod3
+coefID <- c(7,11,12)
+coefNAM <- names(fixef(mod3)[coefID])
+Cmatrix <- matrix(0,3,12)
+Cmatrix[cbind(1:3,coefID)] <- 1
+rownames(Cmatrix) <- coefNAM
+GLH <- multcomp::glht(model = mod3, linfct = Cmatrix)
+summary(GLH) # não significativos
+
+
+# obtendo as esperanças do modelo 3
+sum(mod3$coefficients$fixed[c(1)])
+
+
+# testando os não significativos do mod4
+coefID <- c(4,8,11)
+coefNAM <- names(fixef(mod4)[coefID])
+Cmatrix <- matrix(0,3,16)
+Cmatrix[cbind(1:3,coefID)] <- 1
+rownames(Cmatrix) <- coefNAM
+GLH <- multcomp::glht(model = mod4, linfct = Cmatrix)
+summary(GLH) # não significativos
+
+anova(mod4, mod5.gls)
+
+# Análise de Resíduos -----------------------------------------------------
+
+
+# MODELO 4 
+
+# Resíduos vs Valores Ajustados
+plot(mod4)
+# Q-Qplot dos resíduos
+qqnorm(mod4)
+# plot do ajustado pelo observado
+plot(mod4, kgha ~ fitted(.))
+# Q-Qplot dos efeitos aleatórios
+qqnorm(mod4, ~ranef(.))
+# boxplot dos resíduos por Cultivar
+plot(mod4, Cultivar~resid(., type = "p"), abline = 0, xlim = c(-4.5,4.5))
+# Resíduos vs Valores Ajustados por Solo
+plot(mod4, resid(., type = "p")~fitted(.)|Solo)
+
+
+# MODELO 5 
+
+# Resíduos vs Valores Ajustados
+plot(mod5.gls)
+# Q-Qplot dos resíduos
+qqnorm(mod5.gls)
+# plot do ajustado pelo observado
+plot(mod5.gls, kgha ~ fitted(.))
+# Q-Qplot dos efeitos aleatórios
+qqnorm(mod5.gls, ~ranef(.))
+# boxplot dos resíduos por Cultivar
+plot(mod5.gls, Cultivar~resid(., type = "p"), abline = 0, xlim = c(-4.5,4.5))
+# Resíduos vs Valores Ajustados por Solo
+plot(mod5.gls, resid(., type = "p")~fitted(.)|Solo)
+
+
+# MODELO 3 
+
+# Resíduos vs Valores Ajustados
+plot(mod3)
+# Q-Qplot dos resíduos
+qqnorm(mod3)
+# plot do ajustado pelo observado
+plot(mod3, kgha ~ fitted(.))
+# Q-Qplot dos efeitos aleatórios
+qqnorm(mod3, ~ranef(.))
+# boxplot dos resíduos por Cultivar
+plot(mod3, Cultivar~resid(., type = "p"), abline = 0)
+# Resíduos vs Valores Ajustados por Solo
+plot(mod3, resid(., type = "p")~fitted(.)|Solo)
+
+
+
+sjPlot::plot_model(mod4, type = "diag")
