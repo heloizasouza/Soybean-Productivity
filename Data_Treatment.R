@@ -86,5 +86,27 @@ soybean_data <- soybean_data |>
   mutate(caracteristica = cut(tempeture, breaks = c(-2, -0.5, 0.5, 2), labels = c("laNina", "neutro", "elNino")))
 
 
-
+soybean_data <- soybean_data |>
+  mutate(tha = kgha/1000) |>
+  mutate(Grupo = case_when(
+    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & caracteristica == "laNina" ~ "G1",
+    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & caracteristica == "neutro" ~ "G2",
+    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & caracteristica == "laNina" ~ "G3",
+    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & caracteristica == "neutro" ~ "G4",
+    Solo == "Latossolo" & Ciclo4 == "Precoce" & caracteristica == "laNina" ~ "G5",
+    Solo == "Latossolo" & Ciclo4 == "Precoce" & caracteristica == "neutro" ~ "G6",
+    Solo == "Plintossolo" & Ciclo4 == "Precoce" & caracteristica == "laNina" ~ "G7",
+    Solo == "Plintossolo" & Ciclo4 == "Precoce" & caracteristica == "neutro" ~ "G8",
+    Solo == "Latossolo" & Ciclo4 == "Medio" & caracteristica == "laNina" ~ "G9",
+    Solo == "Latossolo" & Ciclo4 == "Medio" & caracteristica == "neutro" ~ "G10",
+    Solo == "Plintossolo" & Ciclo4 == "Medio" & caracteristica == "laNina" ~ "G11",
+    Solo == "Plintossolo" & Ciclo4 == "Medio" & caracteristica == "neutro" ~ "G12",
+    Solo == "Latossolo" & Ciclo4 == "Tardio" & caracteristica == "laNina" ~ "G13",
+    Solo == "Latossolo" & Ciclo4 == "Tardio" & caracteristica == "neutro" ~ "G14",
+    Solo == "Plintossolo" & Ciclo4 == "Tardio" & caracteristica == "laNina" ~ "G15",
+    Solo == "Plintossolo" & Ciclo4 == "Tardio" & caracteristica == "neutro" ~ "G16",
+    .default = "outro"
+  )) |>
+  mutate(Grupo = factor(Grupo, levels = c("G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9",
+                                          "G10", "G11", "G12", "G13", "G14", "G15", "G16")))
 
