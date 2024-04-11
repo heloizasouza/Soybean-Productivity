@@ -1,4 +1,4 @@
-
+rm(list = ls())
 
 # Libraries ---------------------------------------------------------------
 
@@ -20,7 +20,8 @@ soybean_data <- main_data |>
             ~stringi::stri_trans_general(.,"Latin-ASCII")) |>
   # transforming categorical variables
   # transformando variáveis categóricas
-  mutate_at(vars(Local,Ano,Solo,Cultivar, Textura.do.solo), as.factor) |>
+  mutate_at(vars(Local,Solo,Cultivar, Textura.do.solo), as.factor) |>
+  mutate(Anoc = as.factor(Ano)) |>
   #transforming the Date covariate
   # transformando a covariável de Data
   mutate_at(vars(Plantio), as.Date)
@@ -64,7 +65,10 @@ soybean_data <- soybean_data |>
 # criando a covariável categórica de ciclo de colheita
 soybean_data <- soybean_data |>
   mutate(Ciclo4 = cut(x = Ciclo, breaks = c(-Inf, 100, 110, 120, Inf), 
-                      labels = c("Super Precoce","Precoce","Medio","Tardio")))
+                      labels = c("Super Precoce","Precoce","Medio","Tardio"))) |>
+  # creating an identifier
+  mutate(idCombi = as.factor(paste(Local, Ano, Ciclo4, sep = "_")),
+         id = as.numeric(idCombi))
 
 # creating oceanic season variable
 soybean_data <- soybean_data |>
@@ -114,14 +118,77 @@ soybean_data <- soybean_data |>
 # Descriptive Analysis ----------------------------------------------------
 
 
-# gráfico do perfil médio do caracteristica
+##### Densidade por tipo de Solo #####
+sample_size = soybean_data %>% group_by(Solo) %>% summarize(num=n())
+
+soybean_data %>%
+  left_join(sample_size) %>%
+  mutate(myaxis = paste0(Solo, "\n", "n=", num)) %>%
+  ggplot(aes(x=myaxis, y=kgha)) +
+  geom_violin(width=1.4, aes(fill = Solo)) +
+  # scale_fill_viridis(discrete = TRUE) +
+  # theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Densidade da produtividade de Soja por Solo") +
+  xlab("")
+
+##### Densidade por ANO #####
+sample_size = soybean_data %>% group_by(Ano) %>% summarize(num=n())
+
+soybean_data %>%
+  left_join(sample_size) %>%
+  mutate(myaxis = paste0(Ano, "\n", "n=", num)) %>%
+  ggplot(aes(x=myaxis, y=kgha, fill=Ano)) +
+  geom_violin(width=1.4) +
+  # scale_fill_viridis(discrete = TRUE) +
+  # theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Densidade da produtividade de Soja por Ano") +
+  xlab("")
+
+##### Densidade por Grupo do Ciclo #####
+soybean_data |>
+  ggplot(mapping = aes(x = Ciclo4, y = kgha)) +
+  geom_violin()
+
+##### Densidade por Grupo do Ciclo e SOLO #####
+sample_size = soybean_data %>% group_by(Ciclo4, Solo) %>% summarize(num=n())
+
+soybean_data %>%
+  left_join(sample_size) %>%
+  mutate(myaxis = paste0(Ciclo4, "\n", Solo, "\n", "n=", num)) %>%
+  ggplot(aes(x=myaxis, y=kgha)) +
+  geom_violin(width=1.4, aes(fill = Solo)) +
+  # scale_fill_viridis(discrete = TRUE) +
+  # theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Densidade da produtividade de Soja por Ano e Solo") +
+  xlab("")
+
+
+##### perfil médio do Tipo de Solo ####
+ggplot(data = soybean_data, mapping = aes(x = Ano, y = kgha)) +
+  stat_summary(aes(linetype = Solo, colour = Solo), fun = "mean", geom = "line") +
+  scale_x_continuous(breaks = unique(Ano))
+
+##### perfil médio do Grupo 4 do Ciclo de Maturidade ####
+ggplot(data = soybean_data, mapping = aes(x = Ano, y = kgha)) +
+  stat_summary(fun = "mean", geom = "line", aes(linetype = Ciclo4, colour = Ciclo4)) +
+  scale_x_continuous(breaks = unique(Ano)) +
+  scale_color_brewer(palette="Set1")
+
+###### gráfico do perfil médio da caracteristica
 ggplot(data = soybean_data, mapping = aes(x = Ciclo, y = kgha)) +
   stat_summary(aes(colour = caracteristica) ,fun = "mean", geom = "line")
-
-# gráfico do perfil médio do Solo
-ggplot(data = soybean_data, mapping = aes(x = as.numeric(Ano), y = kgha)) +
-  stat_summary(aes(colour = Solo), fun = "mean", geom = "line") +
-  scale_x_continuous(breaks = unique(as.numeric(Ano)))
 
 
 # Modeling ----------------------------------------------------------------
@@ -142,12 +209,12 @@ summary(mod2)
 # mod sem interação Solo caracteristica
 mod3 <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica, 
             data = soybean_data, random = ~1|Cultivar)
-mod3 <- lmerTest::lmer(kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica + (1|Cultivar), soybean_data)
+# mod3 <- lmerTest::lmer(kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica + (1|Cultivar), soybean_data)
 summary(mod3)
 
 
 # mod com a covar Grupo
-mod4 <- lmerTest::lmer(formula = kgha ~ Grupo + (1|Cultivar), data = soybean_data)
+# mod4 <- lmerTest::lmer(formula = kgha ~ Grupo + (1|Cultivar), data = soybean_data)
 mod4 <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar)
 summary(mod4)
 
@@ -168,7 +235,7 @@ summary(mod5.gls)
 
 
 
-# Teste de Hipótese -------------------------------------------------------
+# Hypothesis Testing -------------------------------------------------------
 
 
 # testando os não significantes do mod2
@@ -201,17 +268,17 @@ sum(mod3$coefficients$fixed[c(1)])
 
 
 # testando os não significativos do mod4
-coefID <- c(4,8,11)
+coefID <- c(4,8)
 coefNAM <- names(fixef(mod4)[coefID])
-Cmatrix <- matrix(0,3,16)
-Cmatrix[cbind(1:3,coefID)] <- 1
+Cmatrix <- matrix(0,2,16)
+Cmatrix[cbind(1:2,coefID)] <- 1
 rownames(Cmatrix) <- coefNAM
 GLH <- multcomp::glht(model = mod4, linfct = Cmatrix)
 summary(GLH) # não significativos
 
 anova(mod4, mod5.gls)
 
-# Análise de Resíduos -----------------------------------------------------
+# Model Diagnosis -----------------------------------------------------
 
 
 # MODELO 4 
