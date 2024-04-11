@@ -5,7 +5,7 @@
 library(xlsx)
 library(tidyverse)
 library(sp)
-
+library(nlme)
 
 # Data Treatment ----------------------------------------------------------
 
@@ -110,3 +110,58 @@ soybean_data <- soybean_data |>
   mutate(Grupo = factor(Grupo, levels = c("G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9",
                                           "G10", "G11", "G12", "G13", "G14", "G15", "G16")))
 
+
+# Descriptive Analysis ----------------------------------------------------
+
+
+# gráfico do perfil médio do caracteristica
+ggplot(data = soybean_data, mapping = aes(x = Ciclo, y = kgha)) +
+  stat_summary(aes(colour = caracteristica) ,fun = "mean", geom = "line")
+
+# gráfico do perfil médio do Solo
+ggplot(data = soybean_data, mapping = aes(x = as.numeric(Ano), y = kgha)) +
+  stat_summary(aes(colour = Solo), fun = "mean", geom = "line") +
+  scale_x_continuous(breaks = unique(as.numeric(Ano)))
+
+
+# Modeling ----------------------------------------------------------------
+
+
+
+# mod com interação tripla
+mod1 <- lme(kgha ~ Solo*Ciclo4*caracteristica, data = soybean_data, random = ~1|Cultivar)
+summary(mod1)
+
+
+# mod com interações duplas
+mod2 <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*caracteristica + Ciclo4*caracteristica, 
+            data = soybean_data, random = ~1|Cultivar)
+summary(mod2)
+
+
+# mod sem interação Solo caracteristica
+mod3 <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica, 
+            data = soybean_data, random = ~1|Cultivar)
+mod3 <- lmerTest::lmer(kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica + (1|Cultivar), soybean_data)
+summary(mod3)
+
+
+# mod com a covar Grupo
+mod4 <- lmerTest::lmer(formula = kgha ~ Grupo + (1|Cultivar), data = soybean_data)
+mod4 <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar)
+summary(mod4)
+
+# removendo os níveis não significativos G4, G8
+# mod41 <- lmerTest::lmer(kgha ~ Grupo + (1|Cultivar), soybean_data,
+#                         subset = !(Grupo %in% c("G4","G8","G11")))
+mod41 <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar,
+             subset = !(Grupo %in% c("G4","G8","G11")))
+summary(mod41)
+
+# mod com variável resposta em tonelada
+# mod41 <- lmerTest::lmer(tha ~ Grupo + (1|Cultivar), soybean_data)
+# summary(mod41)
+
+# mod usando gls - generalized least squares
+mod5 <- gls(model = kgha ~ Grupo, data = soybean_data, weights = varIdent(form = ~1|Cultivar))
+summary(mod5)
