@@ -96,11 +96,11 @@ soybean_data <- soybean_data |>
     Solo == "Latossolo" & Ciclo4 == "Super Precoce" & caracteristica == "laNina" ~ "G1",
     Solo == "Latossolo" & Ciclo4 == "Super Precoce" & caracteristica == "neutro" ~ "G2",
     Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & caracteristica == "laNina" ~ "G3",
-    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & caracteristica == "neutro" ~ "G4",
+    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & caracteristica == "neutro" ~ "G1",
     Solo == "Latossolo" & Ciclo4 == "Precoce" & caracteristica == "laNina" ~ "G5",
     Solo == "Latossolo" & Ciclo4 == "Precoce" & caracteristica == "neutro" ~ "G6",
     Solo == "Plintossolo" & Ciclo4 == "Precoce" & caracteristica == "laNina" ~ "G7",
-    Solo == "Plintossolo" & Ciclo4 == "Precoce" & caracteristica == "neutro" ~ "G8",
+    Solo == "Plintossolo" & Ciclo4 == "Precoce" & caracteristica == "neutro" ~ "G1",
     Solo == "Latossolo" & Ciclo4 == "Medio" & caracteristica == "laNina" ~ "G9",
     Solo == "Latossolo" & Ciclo4 == "Medio" & caracteristica == "neutro" ~ "G10",
     Solo == "Plintossolo" & Ciclo4 == "Medio" & caracteristica == "laNina" ~ "G11",
@@ -196,34 +196,34 @@ ggplot(data = soybean_data, mapping = aes(x = Ciclo, y = kgha)) +
 
 
 # mod com interação tripla
-mod1 <- lme(kgha ~ Solo*Ciclo4*caracteristica, data = soybean_data, random = ~1|Cultivar)
-summary(mod1)
+mod1.lme <- lme(kgha ~ Solo*Ciclo4*caracteristica, data = soybean_data, random = ~1|Cultivar)
+summary(mod1.lme)
 
 
 # mod com interações duplas
-mod2 <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*caracteristica + Ciclo4*caracteristica, 
+mod2.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*caracteristica + Ciclo4*caracteristica, 
             data = soybean_data, random = ~1|Cultivar)
-summary(mod2)
+summary(mod2.lme)
 
 
 # mod sem interação Solo caracteristica
-mod3 <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica, 
+mod3.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica, 
             data = soybean_data, random = ~1|Cultivar)
 # mod3 <- lmerTest::lmer(kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica + (1|Cultivar), soybean_data)
-summary(mod3)
+summary(mod3.lme)
 
 
 # mod com a covar Grupo
 # mod4 <- lmerTest::lmer(formula = kgha ~ Grupo + (1|Cultivar), data = soybean_data)
-mod4 <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar)
+mod4.lme <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar)
 summary(mod4)
 
 # removendo os níveis não significativos G4, G8
 # mod41 <- lmerTest::lmer(kgha ~ Grupo + (1|Cultivar), soybean_data,
 #                         subset = !(Grupo %in% c("G4","G8","G11")))
-mod41 <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar,
+mod41.lme <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar,
              subset = !(Grupo %in% c("G4","G8","G11")))
-summary(mod41)
+summary(mod41.lme)
 
 # mod com variável resposta em tonelada
 # mod41 <- lmerTest::lmer(tha ~ Grupo + (1|Cultivar), soybean_data)
@@ -232,7 +232,6 @@ summary(mod41)
 # mod usando gls - generalized least squares
 mod5.gls <- gls(model = kgha ~ Grupo, data = soybean_data, weights = varIdent(form = ~1|Cultivar))
 summary(mod5.gls)
-
 
 
 # Hypothesis Testing -------------------------------------------------------
@@ -255,28 +254,28 @@ summary(GLH) # não significativos
 
 # testando os não significativos do mod3
 coefID <- c(7,11,12)
-coefNAM <- names(fixef(mod3)[coefID])
+coefNAM <- names(fixef(mod3.lme)[coefID])
 Cmatrix <- matrix(0,3,12)
 Cmatrix[cbind(1:3,coefID)] <- 1
 rownames(Cmatrix) <- coefNAM
-GLH <- multcomp::glht(model = mod3, linfct = Cmatrix)
+GLH <- multcomp::glht(model = mod3.lme, linfct = Cmatrix)
 summary(GLH) # não significativos
 
 
 # obtendo as esperanças do modelo 3
-sum(mod3$coefficients$fixed[c(1)])
+sum(mod3.lme$coefficients$fixed[c(1)])
 
 
 # testando os não significativos do mod4
 coefID <- c(4,8)
-coefNAM <- names(fixef(mod4)[coefID])
+coefNAM <- names(fixef(mod4.lme)[coefID])
 Cmatrix <- matrix(0,2,16)
 Cmatrix[cbind(1:2,coefID)] <- 1
 rownames(Cmatrix) <- coefNAM
-GLH <- multcomp::glht(model = mod4, linfct = Cmatrix)
+GLH <- multcomp::glht(model = mod4.lme, linfct = Cmatrix)
 summary(GLH) # não significativos
 
-anova(mod4, mod5.gls)
+anova(mod4.lme, mod5.gls)
 
 # Model Diagnosis -----------------------------------------------------
 
@@ -284,17 +283,32 @@ anova(mod4, mod5.gls)
 # MODELO 4 
 
 # Resíduos vs Valores Ajustados
-plot(mod4)
+plot(mod4.lme)
 # Q-Qplot dos resíduos
-qqnorm(mod4)
+qqnorm(mod4.lme)
 # plot do ajustado pelo observado
-plot(mod4, kgha ~ fitted(.))
+plot(mod4.lme, kgha ~ fitted(.))
 # Q-Qplot dos efeitos aleatórios
-qqnorm(mod4, ~ranef(.))
+qqnorm(mod4.lme, ~ranef(.))
 # boxplot dos resíduos por Cultivar
-plot(mod4, Cultivar~resid(., type = "p"), abline = 0, xlim = c(-4.5,4.5))
+plot(mod4.lme, Cultivar~resid(., type = "p"), abline = 0, xlim = c(-4.5,4.5))
 # Resíduos vs Valores Ajustados por Solo
-plot(mod4, resid(., type = "p")~fitted(.)|Solo)
+plot(mod4.lme, resid(., type = "p")~fitted(.)|Solo)
+
+
+# tests against heteroskedasticity to mod4
+residuos <- residuals(mod4.lme)
+lmtest::bptest(residuos~Grupo, studentize = FALSE)
+bartlett.test(residuos ~ soybean_data$Grupo)
+car::leveneTest(residuals(mod4.lme) ~ soybean_data$Grupo)
+shapiro.test(residuals(mod4.lme))
+tseries::jarque.bera.test(residuals(mod4.lme))
+
+# tests against heteroskedasticity to mod5
+bartlett.test(residuals(mod5.gls) ~ soybean_data$Grupo)
+lmtest::bptest(residuals(mod5.gls) ~ soybean_data$Grupo, studentize = FALSE)
+car::leveneTest(residuals(mod5.gls) ~ soybean_data$Grupo)
+shapiro.test(residuals(mod5.gls))
 
 
 # MODELO 5 
@@ -316,18 +330,18 @@ plot(mod5.gls, resid(., type = "p")~fitted(.)|Solo)
 # MODELO 3 
 
 # Resíduos vs Valores Ajustados
-plot(mod3)
+plot(mod3.lme)
 # Q-Qplot dos resíduos
-qqnorm(mod3)
+qqnorm(mod3.lme)
 # plot do ajustado pelo observado
-plot(mod3, kgha ~ fitted(.))
+plot(mod3.lme, kgha ~ fitted(.))
 # Q-Qplot dos efeitos aleatórios
-qqnorm(mod3, ~ranef(.))
+qqnorm(mod3.lme, ~ranef(.))
 # boxplot dos resíduos por Cultivar
-plot(mod3, Cultivar~resid(., type = "p"), abline = 0)
+plot(mod3.lme, Cultivar~resid(., type = "p"), abline = 0)
 # Resíduos vs Valores Ajustados por Solo
-plot(mod3, resid(., type = "p")~fitted(.)|Solo)
+plot(mod3.lme, resid(., type = "p")~fitted(.)|Solo)
 
 
 
-sjPlot::plot_model(mod4, type = "diag")
+sjPlot::plot_model(mod4.lme, type = "diag")
