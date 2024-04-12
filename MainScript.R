@@ -72,7 +72,7 @@ soybean_data <- soybean_data |>
 
 # creating oceanic season variable
 soybean_data <- soybean_data |>
-  mutate(tempeture = case_when(
+  mutate(Temp = case_when(
     year(Plantio) == 2017 & month(Plantio) == 11 & year(Colheita) == 2018 & month(Colheita) == 3 ~ mean(-0.7,-0.8,-1.0,-0.9,-0.9,-0.7,-0.5),
     year(Plantio) == 2017 & month(Plantio) == 11 & year(Colheita) == 2018 & month(Colheita) == 4 ~ mean(-0.7,-0.8,-1.0,-0.9,-0.9,-0.7,-0.5,-0.2),
     year(Plantio) == 2017 & month(Plantio) == 11 & year(Colheita) == 2018 & month(Colheita) == 2 ~ mean(-0.7,-0.8,-1.0,-0.9,-0.9,-0.7),
@@ -87,28 +87,28 @@ soybean_data <- soybean_data |>
     year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 2 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1),
     year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 3 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1,0.2),
   )) |>
-  mutate(caracteristica = cut(tempeture, breaks = c(-2, -0.5, 0.5, 2), labels = c("laNina", "neutro", "elNino")))
+  mutate(Caracteristica = cut(Temp, breaks = c(-2, -0.5, 0.5, 2), labels = c("LaNina", "Neutro", "ElNino")))
 
-
+# creating Group variable of interactions Solo, Ciclo and Caracteristica
 soybean_data <- soybean_data |>
   mutate(tha = kgha/1000) |>
   mutate(Grupo = case_when(
-    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & caracteristica == "laNina" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & caracteristica == "neutro" ~ "G2",
-    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & caracteristica == "laNina" ~ "G3",
-    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & caracteristica == "neutro" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Precoce" & caracteristica == "laNina" ~ "G5",
-    Solo == "Latossolo" & Ciclo4 == "Precoce" & caracteristica == "neutro" ~ "G6",
-    Solo == "Plintossolo" & Ciclo4 == "Precoce" & caracteristica == "laNina" ~ "G7",
-    Solo == "Plintossolo" & Ciclo4 == "Precoce" & caracteristica == "neutro" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Medio" & caracteristica == "laNina" ~ "G9",
-    Solo == "Latossolo" & Ciclo4 == "Medio" & caracteristica == "neutro" ~ "G10",
-    Solo == "Plintossolo" & Ciclo4 == "Medio" & caracteristica == "laNina" ~ "G11",
-    Solo == "Plintossolo" & Ciclo4 == "Medio" & caracteristica == "neutro" ~ "G12",
-    Solo == "Latossolo" & Ciclo4 == "Tardio" & caracteristica == "laNina" ~ "G13",
-    Solo == "Latossolo" & Ciclo4 == "Tardio" & caracteristica == "neutro" ~ "G14",
-    Solo == "Plintossolo" & Ciclo4 == "Tardio" & caracteristica == "laNina" ~ "G15",
-    Solo == "Plintossolo" & Ciclo4 == "Tardio" & caracteristica == "neutro" ~ "G16",
+    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G1",
+    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G2",
+    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G3",
+    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G4",
+    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G5",
+    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G6",
+    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G7",
+    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G8",
+    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G9",
+    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G10",
+    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G11",
+    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G12",
+    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G13",
+    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G14",
+    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G15",
+    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G16",
     .default = "outro"
   )) |>
   mutate(Grupo = factor(Grupo, levels = c("G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9",
@@ -117,6 +117,7 @@ soybean_data <- soybean_data |>
 
 # Descriptive Analysis ----------------------------------------------------
 
+attach(soybean_data)
 
 ##### Densidade por tipo de Solo #####
 sample_size = soybean_data %>% group_by(Solo) %>% summarize(num=n())
@@ -186,30 +187,29 @@ ggplot(data = soybean_data, mapping = aes(x = Ano, y = kgha)) +
   scale_x_continuous(breaks = unique(Ano)) +
   scale_color_brewer(palette="Set1")
 
-###### gráfico do perfil médio da caracteristica
+###### gráfico do perfil médio da Caracteristica
 ggplot(data = soybean_data, mapping = aes(x = Ciclo, y = kgha)) +
-  stat_summary(aes(colour = caracteristica) ,fun = "mean", geom = "line")
+  stat_summary(aes(colour = Caracteristica) ,fun = "mean", geom = "line")
 
 
 # Modeling ----------------------------------------------------------------
 
 
-
 # mod com interação tripla
-mod1.lme <- lme(kgha ~ Solo*Ciclo4*caracteristica, data = soybean_data, random = ~1|Cultivar)
+mod1.lme <- lme(kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data, random = ~1|Cultivar)
 summary(mod1.lme)
 
 
 # mod com interações duplas
-mod2.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*caracteristica + Ciclo4*caracteristica, 
+mod2.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
             data = soybean_data, random = ~1|Cultivar)
 summary(mod2.lme)
 
 
-# mod sem interação Solo caracteristica
-mod3.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica, 
+# mod sem interação Solo Caracteristica
+mod3.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
             data = soybean_data, random = ~1|Cultivar)
-# mod3 <- lmerTest::lmer(kgha ~ Solo*Ciclo4 + Ciclo4*caracteristica + (1|Cultivar), soybean_data)
+# mod3 <- lmerTest::lmer(kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica + (1|Cultivar), soybean_data)
 summary(mod3.lme)
 
 
@@ -229,9 +229,24 @@ summary(mod41.lme)
 # mod41 <- lmerTest::lmer(tha ~ Grupo + (1|Cultivar), soybean_data)
 # summary(mod41)
 
-# mod usando gls - generalized least squares
-mod5.gls <- gls(model = kgha ~ Grupo, data = soybean_data, weights = varIdent(form = ~1|Cultivar))
-summary(mod5.gls)
+# mod gls com interação tripla
+mod1.gls <- gls(model = kgha ~ Solo*Ciclo4*Caracteristica, 
+                data = soybean_data, weights = varIdent(form = ~1|Cultivar))
+summary(mod1.gls)
+
+sum(mod1.gls$coefficients[c(1,2,3,6,7,10,11,14)])
+car::leveneTest(residuals(mod1.gls) ~ soybean_data$Cultivar) # rejeita homocedasticidade
+tseries::jarque.bera.test(residuals(mod1.gls)) # rejeita normalidade
+
+# mod gls com interações duplas
+mod2.gls <- gls(model = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica,
+                data = soybean_data, weights = varIdent(form = ~1|Cultivar))
+summary(mod2.gls)
+
+# mod gls sem a interação Solo Característica
+mod3.gls <- gls(model = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
+                data = soybean_data, weights = varIdent(form = ~1|Cultivar))
+summary(mod3.gls)
 
 
 # Hypothesis Testing -------------------------------------------------------
@@ -275,7 +290,16 @@ rownames(Cmatrix) <- coefNAM
 GLH <- multcomp::glht(model = mod4.lme, linfct = Cmatrix)
 summary(GLH) # não significativos
 
-anova(mod4.lme, mod5.gls)
+
+# testando os não significativos no mod1.gls
+coefID <- c(14,15)
+coefNAM <- names(coef(mod1.gls)[coefID])
+Cmatrix <- matrix(0, 2, 16)
+Cmatrix[cbind(1:2,coefID)] <- 1
+rownames(Cmatrix) <- coefNAM
+GLH <- multcomp::glht(model = mod1.gls, linfct = Cmatrix)
+summary(GLH)
+
 
 # Model Diagnosis -----------------------------------------------------
 
@@ -345,3 +369,10 @@ plot(mod3.lme, resid(., type = "p")~fitted(.)|Solo)
 
 
 sjPlot::plot_model(mod4.lme, type = "diag")
+
+
+
+
+# Testing -----------------------------------------------------------------
+
+dados <- model.matrix(mod1.gls)
