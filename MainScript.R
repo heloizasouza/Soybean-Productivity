@@ -194,26 +194,32 @@ ggplot(data = soybean_data, mapping = aes(x = Ciclo, y = kgha)) +
 
 # Modeling ----------------------------------------------------------------
 
+# mod linear
+mod1.lm <- lm(kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data)
+summary(mod1.lm)
+plot(mod1.lm, which=2, col="firebrick")
+plot(mod1.lm, which=3, col="firebrick")
+lmtest::bptest(mod1.lm)
 
-# mod com interação tripla
+# mod misto com interação tripla
 mod1.lme <- lme(kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data, random = ~1|Cultivar)
 summary(mod1.lme)
 
 
-# mod com interações duplas
+# mod misto com interações duplas
 mod2.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
             data = soybean_data, random = ~1|Cultivar)
 summary(mod2.lme)
 
 
-# mod sem interação Solo Caracteristica
+# mod misto sem interação Solo Caracteristica
 mod3.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
             data = soybean_data, random = ~1|Cultivar)
 # mod3 <- lmerTest::lmer(kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica + (1|Cultivar), soybean_data)
 summary(mod3.lme)
 
 
-# mod com a covar Grupo
+# mod misto com a covar Grupo
 # mod4 <- lmerTest::lmer(formula = kgha ~ Grupo + (1|Cultivar), data = soybean_data)
 mod4.lme <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar)
 summary(mod4)
