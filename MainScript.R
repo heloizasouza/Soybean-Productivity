@@ -87,7 +87,7 @@ soybean_data <- soybean_data |>
     year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 2 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1),
     year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 3 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1,0.2),
   )) |>
-  mutate(Caracteristica = cut(Temp, breaks = c(-2, -0.5, 0.5, 2), labels = c("LaNina", "Neutro", "ElNino")))
+  mutate(Caracteristica = cut(Temp, breaks = c(-2, -0.5, 0.5), labels = c("LaNina", "Neutro")))
 
 # creating Group variable of interactions Solo, Ciclo and Caracteristica
 soybean_data <- soybean_data |>
@@ -194,65 +194,72 @@ ggplot(data = soybean_data, mapping = aes(x = Ciclo, y = kgha)) +
 
 # Modeling ----------------------------------------------------------------
 
-# mod linear
+# mod linear independente
 mod1.lm <- lm(kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data)
 summary(mod1.lm)
-plot(mod1.lm, which=2, col="firebrick")
-plot(mod1.lm, which=3, col="firebrick")
+plot(mod1.lm, which=2)
+# Plintossolo apresenta maior variabilidade
+boxplot(rstandard(mod1.lm) ~ soybean_data$Solo, xlab="Solo", ylab="Resíduos")
+# há maior variabilidade nos Ciclos Médio e Tardio
+boxplot(rstandard(mod1.lm) ~ soybean_data$Ciclo4, xlab="Ciclo", ylab="Resíduos")
+# LaNina apresenta maior variabilidade que o Neutro
+boxplot(rstandard(mod1.lm) ~ soybean_data$Caracteristica, xlab="Caracteristica", ylab="Resíduos")
+# há uma variabilidade significativa nos diferentes genótipos
+boxplot(rstandard(mod1.lm) ~ soybean_data$Cultivar, xlab="Cultivar", ylab="Resíduos")
+# rejeita homocedasticidade
 lmtest::bptest(mod1.lm)
-
-# mod misto com interação tripla
-mod1.lme <- lme(kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data, random = ~1|Cultivar)
-summary(mod1.lme)
+# rejeita normalidade
+tseries::jarque.bera.test(residuals(mod1.lm))
 
 
-# mod misto com interações duplas
-mod2.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
-            data = soybean_data, random = ~1|Cultivar)
-summary(mod2.lme)
-
-
-# mod misto sem interação Solo Caracteristica
-mod3.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
-            data = soybean_data, random = ~1|Cultivar)
-# mod3 <- lmerTest::lmer(kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica + (1|Cultivar), soybean_data)
-summary(mod3.lme)
-
-
-# mod misto com a covar Grupo
-# mod4 <- lmerTest::lmer(formula = kgha ~ Grupo + (1|Cultivar), data = soybean_data)
-mod4.lme <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar)
-summary(mod4)
-
-# removendo os níveis não significativos G4, G8
-# mod41 <- lmerTest::lmer(kgha ~ Grupo + (1|Cultivar), soybean_data,
-#                         subset = !(Grupo %in% c("G4","G8","G11")))
-mod41.lme <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar,
-             subset = !(Grupo %in% c("G4","G8","G11")))
-summary(mod41.lme)
-
-# mod com variável resposta em tonelada
-# mod41 <- lmerTest::lmer(tha ~ Grupo + (1|Cultivar), soybean_data)
-# summary(mod41)
-
-# mod gls com interação tripla
+# mod gls com interação tripla e variância no Cultivar
 mod1.gls <- gls(model = kgha ~ Solo*Ciclo4*Caracteristica, 
                 data = soybean_data, weights = varIdent(form = ~1|Cultivar))
 summary(mod1.gls)
-
+boxplot(resid(mod1.gls, type = "normalized") ~ soybean_data$Cultivar, xlab="Cultivar", ylab="Resíduos")
 sum(mod1.gls$coefficients[c(1,2,3,6,7,10,11,14)])
 car::leveneTest(residuals(mod1.gls) ~ soybean_data$Cultivar) # rejeita homocedasticidade
 tseries::jarque.bera.test(residuals(mod1.gls)) # rejeita normalidade
 
-# mod gls com interações duplas
+# mod gls com interações duplas e variância no Cultivar
 mod2.gls <- gls(model = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica,
                 data = soybean_data, weights = varIdent(form = ~1|Cultivar))
 summary(mod2.gls)
+
+vC.Sol.Cic.Car <- varComb(varIdent(form =~ 1|Solo), varIdent(form =~ 1|Ciclo4), varIdent(form =~ 1|Caracteristica))
+vC.Cult.Car <- varComb(varIdent(form =~ 1|Cultivar), varIdent(form =~ 1|Caracteristica))
+
+# mod gls com interação tripla e variância no 
+mod3.gls <- gls(model = kgha ~ Solo*Ciclo4*Caracteristica, 
+                data = soybean_data, weights = vC.Cult.Car)
+summary(mod3.gls)
+
+# mod gls com interação tripla e variância no 
+mod31.gls <- gls(model = kgha ~ Solo*Ciclo4*Caracteristica, 
+                data = soybean_data, weights = varIdent(form = ~1|Cultivar*Ciclo4))
+summary(mod31.gls)
+
+
+car::leveneTest(residuals(mod3.gls) ~ soybean_data$Cultivar) # rejeita homocedasticidade
+tseries::jarque.bera.test(residuals(mod3.gls)) # rejeita normalidade
+boxplot(resid(mod3.gls, type = "normalized") ~ soybean_data$Cultivar, xlab="Cultivar", ylab="Resíduos")
+boxplot(resid(mod3.gls, type = "normalized") ~ soybean_data$Caracteristica, xlab="Caracteristica", ylab="Resíduos")
+
+
+# mod gls com interações duplas
+mod4.gls <- gls(model = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica,
+                data = soybean_data, weights = vC.Cult.Car)
+summary(mod4.gls)
+
+
+anova(mod1.gls, mod3.gls)
+anova(mod2.gls, mod4.gls)
 
 # mod gls sem a interação Solo Característica
 mod3.gls <- gls(model = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
                 data = soybean_data, weights = varIdent(form = ~1|Cultivar))
 summary(mod3.gls)
+
 
 
 # Hypothesis Testing -------------------------------------------------------
@@ -381,4 +388,37 @@ sjPlot::plot_model(mod4.lme, type = "diag")
 
 # Testing -----------------------------------------------------------------
 
-dados <- model.matrix(mod1.gls)
+# mod misto com interação tripla
+mod1.lme <- lme(kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data, random = ~1|Cultivar)
+summary(mod1.lme)
+
+
+# mod misto com interações duplas
+mod2.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
+                data = soybean_data, random = ~1|Cultivar)
+summary(mod2.lme)
+
+
+# mod misto sem interação Solo Caracteristica
+mod3.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
+                data = soybean_data, random = ~1|Cultivar)
+# mod3 <- lmerTest::lmer(kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica + (1|Cultivar), soybean_data)
+summary(mod3.lme)
+
+
+# mod misto com a covar Grupo
+# mod4 <- lmerTest::lmer(formula = kgha ~ Grupo + (1|Cultivar), data = soybean_data)
+mod4.lme <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar)
+summary(mod4)
+
+# removendo os níveis não significativos G4, G8
+# mod41 <- lmerTest::lmer(kgha ~ Grupo + (1|Cultivar), soybean_data,
+#                         subset = !(Grupo %in% c("G4","G8","G11")))
+mod41.lme <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar,
+                 subset = !(Grupo %in% c("G4","G8","G11")))
+summary(mod41.lme)
+
+# mod com variável resposta em tonelada
+# mod41 <- lmerTest::lmer(tha ~ Grupo + (1|Cultivar), soybean_data)
+# summary(mod41)
+
