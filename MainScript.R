@@ -6,6 +6,7 @@ library(xlsx)
 library(tidyverse)
 library(sp)
 library(nlme)
+library(lme4)
 
 # Data Treatment ----------------------------------------------------------
 
@@ -112,10 +113,32 @@ soybean_data <- soybean_data |>
     .default = "outro"
   )) |>
   mutate(Grupo = factor(Grupo, levels = c("G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9",
+                                          "G10", "G11", "G12", "G13", "G14", "G15", "G16"))) |>
+  mutate(Grupo2 = case_when(
+    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G1",
+    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G2",
+    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G3",
+    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G1",
+    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G5",
+    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G6",
+    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G1",
+    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G1",
+    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G9",
+    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G10",
+    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G11",
+    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G12",
+    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G13",
+    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G14",
+    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G15",
+    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G16",
+    .default = "outro"
+  )) |>
+  mutate(Grupo2 = factor(Grupo2, levels = c("G1", "G2", "G3", "G5", "G6", "G9",
                                           "G10", "G11", "G12", "G13", "G14", "G15", "G16")))
+  
 
 # row number
-soybean_data <- soybean_data |> mutate(nrow = 1:nrow(soybean_data))
+# soybean_data <- soybean_data |> mutate(nrow = 1:nrow(soybean_data))
 # # find outliers function
 # findoutlier <- function(x) {
 #   return(x < quantile(x, .25) - 1.5*IQR(x) | x > quantile(x, .75) + 1.5*IQR(x))
@@ -140,7 +163,7 @@ soybean_data <- soybean_data |> mutate(nrow = 1:nrow(soybean_data))
 #   bind_rows(soybean_data |> filter(Ano == 2020 & Solo == "Latossolo" & Cultivar == "W791")) |>
 #   bind_rows(soybean_data |> filter(Local == "Aparecida do Rio Negro" & Ano == 2018 & Solo == "Latossolo" & Cultivar == "BRS230068"))
 # write.csv(x = filtered_data, file = "Produtividade_Soja_Outliers.csv")
-
+# outliers <- c(240,325,250,252,265,269,285,289,316,374,498,499,547,770)
 
 # excluding outliers from the dataset
 soybean_data <- soybean_data[-c(265, 289, 316, 374, 770),]
@@ -233,12 +256,21 @@ ggplot(soybean_data, aes(x = Caracteristica, y = kgha)) +
   geom_boxplot() + facet_grid(Solo~Ciclo4) +
   theme_light()
 
+# coeficiente de variacao por experimento
+cv = soybean_data |> group_by(id) |> summarise(cv(kgha))
+
 
 # Modeling ----------------------------------------------------------------
 
+# linear model
 mod1.lm <- lm(formula = kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data)
 summary(mod1.lm)
 plot(mod1.lm)
+
+# Box-Cox response Transformation
+bc <- MASS::boxcox(mod1.lm)
+lambda <- bc$x[which.max(bc$y)]
+soybean_data$kghaT <- (soybean_data$kgha^lambda - 1)/lambda
 
 
 # modelo misto com interações triplas
@@ -278,7 +310,7 @@ mod3.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica,
                 data = soybean_data, random = ~1|Cultivar)
 summary(mod3.lme)
 tseries::jarque.bera.test(residuals(mod3.lme))
-car::leveneTest(residuals(mod3.lme) ~ Cultivar)
+car::leveneTest(residuals(mod3.lme) ~ soybean_data$Cultivar)
 # testando os coeficientes não significantes do mod3.lme
 coefID <- c(7,11,12)
 coefNAM <- names(fixef(mod3.lme)[coefID])
@@ -290,10 +322,11 @@ summary(GLH) # coeficientes não significativos
 
 
 # modelo misto com covar de Grupo
-mod4.lme <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar)
+mod4.lme <- lme(fixed = log(log(kgha)) ~ Grupo, data = soybean_data, random = ~1|Cultivar)
 summary(mod4.lme)
 tseries::jarque.bera.test(residuals(mod4.lme))
-car::leveneTest(residuals(mod4.lme) ~ Cultivar)
+shapiro.test(resid(mod4.lme))
+car::leveneTest(residuals(mod4.lme) ~ soybean_data$Cultivar)
 # testando os coeficientes não significantes do mod4.lme
 coefID <- c(4,8)
 coefNAM <- names(fixef(mod4.lme)[coefID])
@@ -444,7 +477,7 @@ sjPlot::plot_model(mod4.lme, type = "diag")
 
 
 
-# Testing -----------------------------------------------------------------
+# Codes Testing -----------------------------------------------------------------
 
 
 ks.test(x = kgha, y = "pt")
