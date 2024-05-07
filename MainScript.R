@@ -65,6 +65,8 @@ soybean_data <- soybean_data |>
 # creating the harvest cycle categorical covariate
 # criando a covariável categórica de ciclo de colheita
 soybean_data <- soybean_data |>
+  mutate(Ciclo3 = cut(x = Ciclo, breaks = c(-Inf, 105,115,Inf),
+                      labels = c("Precoce","Medio","Tardio"))) |>
   mutate(Ciclo4 = cut(x = Ciclo, breaks = c(-Inf, 100, 110, 120, Inf), 
                       labels = c("Super Precoce","Precoce","Medio","Tardio"))) |>
   # creating an identifier
@@ -88,7 +90,9 @@ soybean_data <- soybean_data |>
     year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 2 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1),
     year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 3 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1,0.2),
   )) |>
-  mutate(Caracteristica = cut(Temp, breaks = c(-2, -0.5, 0.5), labels = c("LaNina", "Neutro")))
+  mutate(Caracteristica = cut(Temp, breaks = c(-2, -0.5, 0.5), labels = c("LaNina", "Neutro"))) |>
+  mutate(Clima = cut(Temp, breaks = c(-2,-1.5,-1.0,-0.5,0.5,1.0,1.5,2.0), 
+                     labels = c("ForteLaNina","ModerLaNina","FracoLaNina","Neutro","FracoElNino","ModerElNino","FortElNino")))
 
 # creating Group variable of interactions Solo, Ciclo and Caracteristica
 soybean_data <- soybean_data |>
