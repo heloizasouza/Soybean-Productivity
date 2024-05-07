@@ -63,6 +63,40 @@ lambda <- bc$x[which.max(bc$y)]
 soybean_data$kghaT <- (soybean_data$kgha^lambda - 1)/lambda
 
 
+
+#### Gráficos #####
+
+# Definir os modelos e transformações de resposta
+modelos <- list(
+  list(formula = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, nome = "y=kgha"),
+  list(formula = kghaT ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, nome = "y=kghaT"),
+  list(formula = log(kgha) ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, nome = "y=log(kgha)")
+)
+# Iterar sobre os modelos
+for (mod in modelos) {
+  # Ajustar o modelo linear
+  mod1.lm <- lm(mod$formula, data = soybean_data)
+  # Realizar o teste de Shapiro-Wilk
+  print(shapiro.test(rstandard(mod1.lm)))
+  # Calcula a média e o desvio padrão dos resíduos
+  mean_resid <- mean(rstandard(mod1.lm))
+  sd_resid <- sd(rstandard(mod1.lm))
+  # Calcula os graus de liberdade para a distribuição t
+  df <- length(rstandard(mod1.lm)) - length(coefficients(mod1.lm))
+  # Realizar o teste de Kolmogorov-Smirnov
+  residuos <- rstandard(mod1.lm)
+  print(ks.test(x = residuos, y = "pt", df = df))
+  # Plota o histograma dos resíduos
+  hist(residuos, freq = FALSE, main = paste("Resíduos de", mod$nome))
+  # Adiciona a curva de densidade da distribuição t
+  curve(dt(x, df), add = TRUE, col = "blue", lwd = 2)
+  # Adiciona a curva de densidade da distribuição normal
+  curve(dnorm(x, mean_resid, sd_resid), add = TRUE, col = "red", lwd = 2)
+  # Adiciona a curva de densidade da distribuição gama
+  curve(dgamma(x, shape = 2, rate = 1/2), add = TRUE, col = "green", lwd = 2)
+}
+
+
 ##### BIBLIOTECAS ####
 library(DHARMa)
 
@@ -208,6 +242,14 @@ summary(mod2.glmm)
 mod3.glmm <- lme4::glmer(formula = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica + (1|Cultivar),
                          data = soybean_data, family = gaussian(link = "log"))
 summary(mod3.glmm)
+shapiro.test(resid(mod3.glmm))
+simulationOutput <- simulateResiduals(fittedModel = mod3.glmm)
+testUniformity(simulationOutput)
+plot(simulationOutput)
+par(mfrow=c(1,3))
+plotResiduals(simulationOutput, soybean_data$Solo)
+plotResiduals(simulationOutput, soybean_data$Caracteristica)
+plotResiduals(simulationOutput, soybean_data$Ciclo4)
 
 
 ##### Mod GLMM 4 - Resp original e covar Grupo e Cultivar randon ####
@@ -216,6 +258,11 @@ mod4.glmm <- lme4::glmer(formula = kgha ~ Grupo + (1|Cultivar),
                          data = soybean_data, family = gaussian(link = "log"))
 summary(mod4.glmm)
 shapiro.test(resid(mod4.glmm))
+simulationOutput <- simulateResiduals(fittedModel = mod4.glmm)
+testUniformity(simulationOutput)
+plot(simulationOutput)
+
+
 # testando os coeficientes não significantes do mod2.lme
 coefID <- c(4,6,7,8,11,13,15,16)
 coefNAM <- names(fixef(mod4.glmm)[coefID])
@@ -234,7 +281,7 @@ summary(mod5.glmm)
 simulationOutput <- simulateResiduals(fittedModel = mod5.glmm)
 testUniformity(simulationOutput)
 plot(simulationOutput)
-
+plotResiduals(simulationOutput, soybean_data$Grupo2)
 
 
 ##### Mod GLS 1 - Resp original interaç tripla e Variância no Cultivar ####
