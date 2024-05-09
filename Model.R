@@ -58,8 +58,9 @@ soybean_data <- soybean_data |>
   mutate(prodMean = mean(kgha), prodMed = median(kgha))
 
 # Box-Cox response Transformation
+mod1.lm <- lm(kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data)
 bc <- MASS::boxcox(mod1.lm)
-lambda <- bc$x[which.max(bc$y)]
+lambda <- 0.9
 soybean_data$kghaT <- (soybean_data$kgha^lambda - 1)/lambda
 
 
@@ -147,6 +148,7 @@ mod1.lme <- lme(fixed = kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data,
                 random = ~1|Cultivar)
 summary(mod1.lme)
 tseries::jarque.bera.test(resid(mod1.lme)) # rejeita normalidade
+shapiro.test(resid(mod1.lme))
 car::leveneTest(resid(mod1.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
 
 
@@ -156,6 +158,7 @@ mod2.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caract
                 data = soybean_data, random = ~1|Cultivar)
 summary(mod2.lme)
 tseries::jarque.bera.test(resid(mod2.lme)) # rejeita normalidade
+shapiro.test(resid(mod2.lme))
 car::leveneTest(resid(mod2.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
 
 
@@ -164,6 +167,7 @@ car::leveneTest(resid(mod2.lme) ~ Cultivar, soybean_data) # rejeita homocedastic
 mod3.lme <- lme(fixed = kgha ~ Grupo, data = soybean_data, random = ~1|Cultivar)
 summary(mod3.lme)
 tseries::jarque.bera.test(resid(mod3.lme)) # rejeita normalidade
+shapiro.test(resid(mod3.lme))
 car::leveneTest(resid(mod3.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
 
 
@@ -172,12 +176,13 @@ car::leveneTest(resid(mod3.lme) ~ Cultivar, soybean_data) # rejeita homocedastic
 mod4.lme <- lme(fixed = kgha ~ Grupo2, data = soybean_data, random = ~1|Cultivar)
 summary(mod4.lme)
 tseries::jarque.bera.test(resid(mod4.lme)) # rejeita normalidade
+shapiro.test(resid(mod4.lme))
 car::leveneTest(resid(mod4.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
 
 
 ##### Mod MISTO 5 - Resp transform por Box-Cox interação tripla e Cultivar de efeit aleat ####
 
-mod5.lme <- lme(fixed = (kgha)^0.47 ~ Solo*Ciclo4*Caracteristica, data = soybean_data,
+mod5.lme <- lme(fixed = kghaT ~ Solo*Ciclo4*Caracteristica, data = soybean_data,
                 random = ~1|Cultivar)
 summary(mod5.lme)
 tseries::jarque.bera.test(resid(mod5.lme)) # rejeita normalidade
@@ -187,7 +192,7 @@ car::leveneTest(resid(mod5.lme) ~ Cultivar, soybean_data) # rejeita homocedastic
 
 ##### Mod MISTO 6 - Resp transform por Box-Cox interações duplas e Cultivar de efeit aleat ####
 
-mod6.lme <- lme(fixed = (kgha)^0.47 ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
+mod6.lme <- lme(fixed = kghaT ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
                 data = soybean_data, random = ~1|Cultivar)
 summary(mod6.lme)
 tseries::jarque.bera.test(resid(mod6.lme)) # rejeita normalidade
@@ -197,7 +202,7 @@ car::leveneTest(resid(mod6.lme) ~ Cultivar, soybean_data) # rejeita homocedastic
 
 ##### Mod MISTO 7 - Resp transform por Box-Cox sem interações duplas de Solo e Característica ####
 
-mod7.lme <- lme(fixed = (kgha)^0.47 ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
+mod7.lme <- lme(fixed = kghaT ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
                 data = soybean_data, random = ~1|Cultivar)
 summary(mod7.lme)
 tseries::jarque.bera.test(resid(mod7.lme)) # rejeita normalidade
@@ -207,7 +212,7 @@ car::leveneTest(resid(mod7.lme) ~ Cultivar, soybean_data) # rejeita homocedastic
 
 ##### Mod MISTO 8 - Resp transform por Box-Cox covar Grupo e Cultivar de efeit aleat ####
 
-mod8.lme <- lme(fixed = (kgha)^0.47 ~ Grupo, data = soybean_data, random = ~1|Cultivar)
+mod8.lme <- lme(fixed = kghaT ~ Grupo, data = soybean_data, random = ~1|Cultivar)
 summary(mod8.lme)
 tseries::jarque.bera.test(resid(mod8.lme)) # rejeita normalidade
 shapiro.test(resid(mod8.lme))
@@ -216,77 +221,113 @@ car::leveneTest(resid(mod8.lme) ~ Cultivar, soybean_data) # rejeita homocedastic
 
 ##### Mod MISTO 9 - Resp transform por Box-Cox covar Grupo2 e Cultivar de efeit aleat ####
 
-mod9.lme <- lme(fixed = (kgha)^0.47 ~ Grupo2, data = soybean_data, random = ~1|Cultivar)
+mod9.lme <- lme(fixed = kghaT ~ Grupo2, data = soybean_data, random = ~1|Cultivar)
 summary(mod9.lme)
 tseries::jarque.bera.test(resid(mod9.lme)) # rejeita normalidade
 shapiro.test(resid(mod9.lme))
 car::leveneTest(resid(mod9.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
 
 
-##### Mod GLMM 1 - Resp original interaç tripla e Cultivar randon ####
+##### Mod MISTO 10 - Resp transform kgha^0.47 interação tripla e Cultivar de efeit aleat ####
 
-mod1.glmm <- lme4::glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
-                         data = soybean_data, family = gaussian(link = "log"))
-summary(mod1.glmm)
-
-
-##### Mod GLMM 2 - Resp original interações duplas e Cultivar randon ####
-
-mod2.glmm <- lme4::glmer(formula = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica + (1|Cultivar),
-                         data = soybean_data, family = gaussian(link = "log"))
-summary(mod2.glmm)
+mod10.lme <- lme(fixed = (kgha)^0.47 ~ Solo*Ciclo4*Caracteristica, data = soybean_data,
+                random = ~1|Cultivar)
+summary(mod10.lme)
+tseries::jarque.bera.test(resid(mod10.lme)) # rejeita normalidade
+shapiro.test(resid(mod10.lme))
+car::leveneTest(resid(mod10.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
 
 
-##### Mod GLMM 3 - Resp original interações duplas menos Solo e Caracteristica ####
+##### Mod MISTO 11 - Resp transform kgha^0.47 interações duplas e Cultivar de efeit aleat ####
 
-mod3.glmm <- lme4::glmer(formula = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica + (1|Cultivar),
-                         data = soybean_data, family = gaussian(link = "log"))
-summary(mod3.glmm)
-shapiro.test(resid(mod3.glmm))
-simulationOutput <- simulateResiduals(fittedModel = mod3.glmm)
-testUniformity(simulationOutput)
-plot(simulationOutput)
-par(mfrow=c(1,3))
-plotResiduals(simulationOutput, soybean_data$Solo)
-plotResiduals(simulationOutput, soybean_data$Caracteristica)
-plotResiduals(simulationOutput, soybean_data$Ciclo4)
+mod11.lme <- lme(fixed = (kgha)^0.47 ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
+                data = soybean_data, random = ~1|Cultivar)
+summary(mod11.lme)
+tseries::jarque.bera.test(resid(mod11.lme)) # rejeita normalidade
+shapiro.test(resid(mod11.lme))
+car::leveneTest(resid(mod11.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
 
 
-##### Mod GLMM 4 - Resp original e covar Grupo e Cultivar randon ####
+##### Mod MISTO 12 - Resp transform kgha^0.47 sem interações duplas de Solo e Característica ####
 
-mod4.glmm <- lme4::glmer(formula = kgha ~ Grupo + (1|Cultivar),
-                         data = soybean_data, family = gaussian(link = "log"))
-summary(mod4.glmm)
-shapiro.test(resid(mod4.glmm))
-simulationOutput <- simulateResiduals(fittedModel = mod4.glmm)
-testUniformity(simulationOutput)
-plot(simulationOutput)
-
-
-# testando os coeficientes não significantes do mod2.lme
-coefID <- c(4,6,7,8,11,13,15,16)
-coefNAM <- names(fixef(mod4.glmm)[coefID])
-Cmatrix <- matrix(0,8,16)
-Cmatrix[cbind(1:8,coefID)] <- 1
-rownames(Cmatrix) <- coefNAM
-GLH <- multcomp::glht(model = mod4.glmm, linfct = Cmatrix)
-summary(GLH) # coeficientes não significativos
+mod12.lme <- lme(fixed = kgha^0.4 ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
+                data = soybean_data, random = ~1|Cultivar)
+summary(mod12.lme)
+tseries::jarque.bera.test(resid(mod12.lme)) # rejeita normalidade
+shapiro.test(resid(mod12.lme))
+car::leveneTest(resid(mod12.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
+ks.test(resid(mod12.lme), "dnorm")
 
 
-##### Mod GLMM 5 - Resp original e covar de Grupo ajustada com Cultivar randon ####
+##### Mod MISTO 13 - Resp transform kgha^0.47 covar Grupo e Cultivar de efeit aleat ####
 
-mod5.glmm <- lme4::glmer(formula = kgha ~ Grupo2 + (1|Cultivar),
-                         data = soybean_data, family = gaussian(link = "log"))
-summary(mod5.glmm)
-simulationOutput <- simulateResiduals(fittedModel = mod5.glmm)
-testUniformity(simulationOutput)
-plot(simulationOutput)
-plotResiduals(simulationOutput, soybean_data$Grupo2)
+mod13.lme <- lme(fixed = (kgha)^0.47 ~ Grupo, data = soybean_data, random = ~1|Cultivar)
+summary(mod13.lme)
+tseries::jarque.bera.test(resid(mod13.lme)) # rejeita normalidade
+shapiro.test(resid(mod13.lme))
+car::leveneTest(resid(mod13.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
+
+
+##### Mod MISTO 14 - Resp transform kgha^0.47 covar Grupo2 e Cultivar de efeit aleat ####
+
+mod14.lme <- lme(fixed = (kgha)^0.47 ~ Grupo2, data = soybean_data, random = ~1|Cultivar)
+summary(mod14.lme)
+tseries::jarque.bera.test(resid(mod14.lme)) # rejeita normalidade
+shapiro.test(resid(mod14.lme))
+car::leveneTest(resid(mod14.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
+
+
+##### Mod MISTO 15 - Resp transform log(kgha) interação tripla e Cultivar de efeit aleat ####
+
+mod15.lme <- lme(fixed =  log(kgha) ~ Solo*Ciclo4*Caracteristica, data = soybean_data,
+                 random = ~1|Cultivar)
+summary(mod15.lme)
+tseries::jarque.bera.test(resid(mod15.lme)) # rejeita normalidade
+shapiro.test(resid(mod15.lme))
+car::leveneTest(resid(mod15.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
+
+
+##### Mod MISTO 16 - Resp transform  log(kgha) interações duplas e Cultivar de efeit aleat ####
+
+mod16.lme <- lme(fixed =  log(kgha) ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
+                 data = soybean_data, random = ~1|Cultivar)
+summary(mod16.lme)
+tseries::jarque.bera.test(resid(mod16.lme)) # rejeita normalidade
+shapiro.test(resid(mod16.lme))
+car::leveneTest(resid(mod16.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
+
+
+##### Mod MISTO 17 - Resp transform  log(kgha) sem interações duplas de Solo e Característica ####
+
+mod17.lme <- lme(fixed =  log(kgha) ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
+                 data = soybean_data, random = ~1|Cultivar)
+summary(mod17.lme)
+tseries::jarque.bera.test(resid(mod17.lme)) # rejeita normalidade
+shapiro.test(resid(mod17.lme))
+car::leveneTest(resid(mod17.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
+
+
+##### Mod MISTO 18 - Resp transform  log(kgha) covar Grupo e Cultivar de efeit aleat ####
+
+mod18.lme <- lme(fixed =  log(kgha) ~ Grupo, data = soybean_data, random = ~1|Cultivar)
+summary(mod18.lme)
+tseries::jarque.bera.test(resid(mod18.lme)) # rejeita normalidade
+shapiro.test(resid(mod18.lme))
+car::leveneTest(resid(mod18.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
+
+
+##### Mod MISTO 19 - Resp transform  log(kgha) covar Grupo2 e Cultivar de efeit aleat ####
+
+mod19.lme <- lme(fixed =  log(kgha) ~ Grupo2, data = soybean_data, random = ~1|Cultivar)
+summary(mod19.lme)
+tseries::jarque.bera.test(resid(mod19.lme)) # rejeita normalidade
+shapiro.test(resid(mod19.lme))
+car::leveneTest(resid(mod19.lme) ~ Cultivar, soybean_data) # rejeita homocedasticidade
+
 
 
 ##### Mod GLS 1 - Resp original interaç tripla e Variância no Cultivar ####
 
-# mod gls com interação tripla e variância no Cultivar
 mod1.gls <- gls(model = kgha ~ Solo*Ciclo4*Caracteristica, 
                 data = soybean_data, weights = varIdent(form = ~1|Cultivar))
 summary(mod1.gls)
@@ -370,6 +411,259 @@ mod10.gls <- gls(model = prodMed ~ Grupo, data = soybean_data)
 summary(mod10.gls)
 tseries::jarque.bera.test(resid(mod10.gls)) # rejeita normalidade
 
+
+
+##### Mod GLMM 1 - Resp original interaç tripla e Cultivar randon ####
+
+mod1.glmm <- glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                         data = soybean_data, family = gaussian(link = "identity"),
+                   weights = varIdent(1|Cultivar))
+summary(mod1.glmm)
+shapiro.test(mod1.glmm@u)
+shapiro.test(simulationOutput)
+
+shapiro.test(resid(mod1.glmm, type = "pearson"))
+
+
+qqplot(y = resid(mod1.glmm, type="pearson"))
+
+# obtém os resíduos escalonados simulados
+simulationOutput <- simulateResiduals(fittedModel = mod1.glmm, , quantileFunction = qnorm, outlierValues = c(-7,7))
+
+# testa a uniformidade geral dos resíduos simulados 
+# pelo ks.test e compara com a dist uniforme 
+testUniformity(simulationOutput, plot = F)
+#ks.test(simulationOutput$scaledResiduals, "dunif") # seria algo tipo isso
+
+# faz testes baseados em simulação para sobre/subdispersão 
+# e verifica se é igual a observada
+testDispersion(simulationOutput, plot = F)
+
+# A função ajusta regressões quantílicas (por meio do pacote qgam) nos resíduos 
+# e compara sua localização com a localização esperada
+testQuantiles(simulationOutput)
+
+#o gráfico calcula um teste de uniformidade por caixa e
+# um teste de homogeneidade de variâncias entre caixas
+par(mfrow=c(1,3))
+plotResiduals(simulationOutput, form = soybean_data$Solo)
+plotResiduals(simulationOutput, form = soybean_data$Ciclo4)
+plotResiduals(simulationOutput, form = soybean_data$Caracteristica)
+
+plot(simulationOutput)
+# Reajusta o modelo com todos os otimizadores disponíveis
+gm_all <- allFit(mod1.glmm)
+ss <- summary(gm_all)
+
+
+##### Mod GLMM 2 - Resp original interações duplas e Cultivar randon ####
+
+mod2.glmm <- glmer(formula = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica + (1|Cultivar),
+                         data = soybean_data, family = gaussian(link = "log"))
+summary(mod2.glmm)
+mod2.glmm@u
+
+##### Mod GLMM 3 - Resp original interações duplas menos Solo e Caracteristica ####
+
+mod3.glmm <- glmer(formula = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica + (1|Cultivar),
+                         data = soybean_data, family = gaussian(link = "log"))
+summary(mod3.glmm)
+mod3.glmm@u
+shapiro.test(mod3.glmm@u)
+simulationOutput <- simulateResiduals(fittedModel = mod3.glmm)
+testUniformity(simulationOutput)
+plot(simulationOutput)
+par(mfrow=c(1,3))
+plotResiduals(simulationOutput, soybean_data$Solo)
+plotResiduals(simulationOutput, soybean_data$Caracteristica)
+plotResiduals(simulationOutput, soybean_data$Ciclo4)
+
+
+##### Mod GLMM 4 - Resp original e covar Grupo e Cultivar randon ####
+
+mod4.glmm <- glmer(formula = kgha ~ Grupo + (1|Cultivar),
+                         data = soybean_data, family = gaussian(link = "log"))
+summary(mod4.glmm)
+shapiro.test(mod4.glmm@u)
+simulationOutput <- simulateResiduals(fittedModel = mod4.glmm)
+testUniformity(simulationOutput)
+plot(simulationOutput)
+
+
+# testando os coeficientes não significantes do mod2.lme
+coefID <- c(4,6,7,8,11,13,15,16)
+coefNAM <- names(fixef(mod4.glmm)[coefID])
+Cmatrix <- matrix(0,8,16)
+Cmatrix[cbind(1:8,coefID)] <- 1
+rownames(Cmatrix) <- coefNAM
+GLH <- multcomp::glht(model = mod4.glmm, linfct = Cmatrix)
+summary(GLH) # coeficientes não significativos
+
+
+##### Mod GLMM 5 - Resp original e covar de Grupo ajustada com Cultivar randon ####
+
+mod5.glmm <- glmer(formula = kgha ~ Grupo2 + (1|Cultivar),
+                         data = soybean_data, family = gaussian(link = "log"))
+summary(mod5.glmm)
+simulationOutput <- simulateResiduals(fittedModel = mod5.glmm)
+testUniformity(simulationOutput)
+plot(simulationOutput)
+plotResiduals(simulationOutput, soybean_data$Grupo2)
+
+
+
+##### Mod GLMM 7 - Resp kgha^0.47 link log interaç tripla e Cultivar randon ####
+
+mod7.glmm <- glmer(formula = kgha^0.47 ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = gaussian(link = "log"))
+summary(mod7.glmm)
+shapiro.test(mod7.glmm@u)
+
+# obtém os resíduos escalonados simulados
+simulationOutput <- simulateResiduals(fittedModel = mod7.glmm, plot = F)
+plot(simulationOutput)
+
+
+##### Mod GLMM 8 - Resp kgha^0.47 link log covar Grupo e Cultivar randon ####
+
+mod8.glmm <- glmer(formula = kgha^0.47 ~ Grupo + (1|Cultivar),
+                   data = soybean_data, family = gaussian(link = "log"))
+summary(mod8.glmm)
+shapiro.test(mod8.glmm@u)
+simulationOutput <- simulateResiduals(fittedModel = mod8.glmm)
+testUniformity(simulationOutput)
+plot(simulationOutput)
+
+
+##### Mod GLMM 9 - Resp kgha^0.47 link log interaç tripla e Cultivar randon e var ####
+
+mod9.glmm <- glmer(formula = kgha^0.47 ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = gaussian(link = "log"),
+                   weights = varIdent(form = ~1|Cultivar))
+
+mod <- lme(fixed = kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data,
+           random = ~1|Cultivar, weights = varIdent(form = ~1|Cultivar) )
+
+
+
+
+##### Mod GLMM 10 - Resp kgha^0.47 link log covar Grupo e Cultivar randon e var ####
+
+mod10.glmm <- glmer(formula = kgha^0.47 ~ Grupo + (1|Cultivar),
+                   data = soybean_data, family = gaussian(link = "log"),
+                   weights = varIdent(form = ~1|Cultivar))
+
+
+##### Mods GLMM que deram ERRO ####
+
+# GLMM resp kgha family gaussian link inverse #### 
+mod6.glmm <- glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = gaussian(link = "inverse"))
+
+# GLMM resp kgha family gaussian link link 1/mu^2 ##### 
+mod6.glmm <- glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = gaussian(link = "1/mu^2"))
+
+# GLMM resp kgha family inverse.gaussian link 1/mu^2 ##### 
+mod6.glmm <- glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = inverse.gaussian(link = "1/mu^2"))
+
+# GLMM resp kgha family inverse.gaussian link inverse #####
+mod6.glmm <- glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = inverse.gaussian(link = "inverse"))
+
+# GLMM resp kgha family inverse.gaussian link log ####
+mod6.glmm <- glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = inverse.gaussian(link = "log"))
+
+# GLMM resp kghaT family gaussian link log ####
+mod6.glmm <- glmer(formula = kghaT ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = gaussian(link = "log"))
+mod6.glmm@u
+
+# GLMM resp log(kgha) family gaussian link log ####
+mod6.glmm <- glmer(formula = log(kgha) ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = gaussian(link = "log"))
+shapiro.test(mod6.glmm@u)
+
+# GLMM resp kgha^0.47 family gaussian link log ####
+mod6.glmm <- glmer(formula = kgha^0.47 ~ Solo*Ciclo4*Caracteristica + (1|Cultivar),
+                   data = soybean_data, family = gaussian(link = "log"))
+shapiro.test(mod6.glmm@u)
+
+
+#### mod GLMM - Resp kgha family Gamma link inverse #### 
+mod20.glm <- glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar), 
+                   data = soybean_data, family = Gamma)
+mod2.glmm@u
+
+#### mod GLMM - Resp kgha family Gamma link 1/mu^2 #### 
+mod20.glm <- glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar), 
+                   data = soybean_data, family = Gamma(link = "1/mu^2"))
+mod2.glmm@u
+
+#### mod GLMM - Resp kgha family Gamma link log #### 
+mod20.glm <- glmer(formula = kgha ~ Solo*Ciclo4*Caracteristica + (1|Cultivar), 
+                   data = soybean_data, family = Gamma(link = "log"))
+mod2.glmm@u
+
+
+
+##### LME from NLME #####
+
+fit1.lme <- nlme::lme(fixed = kgha ~ Solo*Ciclo4*Caracteristica, 
+                      data = soybean_data, random = ~1|Cultivar,
+                      weights = varIdent(form = ~1|Cultivar))
+
+summary(fit1.lme)
+shapiro.test(fit1.lme$coefficients$random$Cultivar)
+shapiro.test(rstandard(fit1.lme))
+
+
+fit2.lme <- nlme::lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica + Solo*Caracteristica, 
+                      data = soybean_data, random = ~1|Cultivar,
+                      weights = varIdent(form = ~1|Cultivar))
+
+summary(fit2.lme)
+shapiro.test(fit2.lme$coefficients$random$Cultivar)
+shapiro.test(fit2.lme$residuals)
+
+
+fit3.lme <- nlme::lme(fixed = kgha ~ Grupo, 
+                      data = soybean_data, random = ~1|Cultivar,
+                      weights = varIdent(form = ~1|Cultivar))
+
+summary(fit3.lme)
+shapiro.test(fit3.lme$coefficients$random$Cultivar)
+shapiro.test(fit3.lme$residuals)
+
+
+
+fit4.lme <- nlme::lme(fixed = log(kgha) ~ Solo*Ciclo4*Caracteristica, 
+                      data = soybean_data, random = ~1|Cultivar,
+                      weights = varIdent(form = ~1|Cultivar))
+
+summary(fit4.lme)
+shapiro.test(fit4.lme$coefficients$random$Cultivar)
+shapiro.test(fit4.lme$residuals)
+
+
+fit5.lme <- nlme::lme(fixed = log(kgha) ~ Solo*Ciclo4 + Ciclo4*Caracteristica + Solo*Caracteristica, 
+                      data = soybean_data, random = ~1|Cultivar,
+                      weights = varIdent(form = ~1|Cultivar))
+
+summary(fit5.lme)
+shapiro.test(fit5.lme$coefficients$random$Cultivar)
+shapiro.test(fit5.lme$residuals)
+
+
+fit6.lme <- nlme::lme(fixed = log(kgha) ~ Grupo, 
+                      data = soybean_data, random = ~1|Cultivar,
+                      weights = varIdent(form = ~1|Cultivar))
+
+summary(fit6.lme)
+shapiro.test(fit6.lme$coefficients$random$Cultivar)
+shapiro.test(fit6.lme$residuals)
 
 
 # Outro Modelos testados --------------------------------------------------
@@ -501,3 +795,4 @@ anova(mod2.gls, mod4.gls)
 mod5.gls <- gls(model = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
                 data = soybean_data, weights = varIdent(form = ~1|Cultivar))
 summary(mod5.gls)
+
