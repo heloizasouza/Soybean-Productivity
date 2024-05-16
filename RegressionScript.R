@@ -2,7 +2,7 @@ rm(list = ls())
 
 # Libraries ---------------------------------------------------------------
 
-library(xlsx)
+library(readxl)
 library(tidyverse)
 library(sp)
 library(nlme)
@@ -11,17 +11,18 @@ library(lme4)
 # Data Treatment ----------------------------------------------------------
 
 # loading principal data file
-main_data <- read.xlsx("Data/Dados - Produtividade em Latossolo e Plintossolo - 2018 a 2023.xlsx", sheetIndex = 1)
-main_data <- main_data[,1:12]
+main_data <- read_excel("Data/Dados - Produtividade em Latossolo e Plintossolo - 2018 a 2023.xlsx")
+# correcting col names
+colnames(main_data) <- gsub(pattern = '\\s', replacement = '\\_', x = names(main_data))
 
 soybean_data <- main_data |>
   # removing accents
   # removendo acentos
-  mutate_at(vars(Local, Textura.do.solo, Cultivar), 
+  mutate_at(vars(Local, Textura_do_solo, Cultivar), 
             ~stringi::stri_trans_general(.,"Latin-ASCII")) |>
   # transforming categorical variables
   # transformando variáveis categóricas
-  mutate_at(vars(Local,Solo,Cultivar, Textura.do.solo), as.factor) |>
+  mutate_at(vars(Local,Solo,Cultivar, Textura_do_solo), as.factor) |>
   mutate(Anoc = as.factor(Ano)) |>
   #transforming the Date covariate
   # transformando a covariável de Data
@@ -30,7 +31,7 @@ soybean_data <- main_data |>
 
 # correcting coordinates
 soybean_data <- soybean_data |>
-  separate(Lat..e.Long., into = c("Latit", "Longit"), sep = ";") |>
+  separate(Lat._e_Long., into = c("Latit", "Longit"), sep = ";") |>
   mutate(Latit = case_when(
     Local == "Pium" ~ "10°12' 58'' S",
     Local == "Paraiso do Tocantins" ~ "10°11' 16.9'' S",
@@ -91,8 +92,9 @@ soybean_data <- soybean_data |>
     year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 3 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1,0.2),
   )) |>
   mutate(Caracteristica = cut(Temp, breaks = c(-2, -0.5, 0.5), labels = c("LaNina", "Neutro"))) |>
-  mutate(Clima = cut(Temp, breaks = c(-2,-1.5,-1.0,-0.5,0.5,1.0,1.5,2.0), 
-                     labels = c("ForteLaNina","ModerLaNina","FracoLaNina","Neutro","FracoElNino","ModerElNino","FortElNino")))
+  mutate(Clima = cut(Temp, breaks = c(-1.5,-1.0,-0.5,0.5), 
+                     labels = c("ModerLaNina","FracoLaNina","Neutro"))) |>
+  mutate(Clima = ordered(Clima, levels = c("Neutro", "FracoLaNina", "ModerLaNina")))
 
 # creating Group variable of interactions Solo, Ciclo and Caracteristica
 soybean_data <- soybean_data |>
@@ -170,7 +172,7 @@ soybean_data <- soybean_data |>
 # outliers <- c(240,325,250,252,265,269,285,289,316,374,498,499,547,770)
 
 # excluding outliers from the dataset
-soybean_data <- soybean_data[-c(265, 289, 316, 374, 770),]
+# soybean_data <- soybean_data[-c(265, 289, 316, 374, 770),]
 
 
 # Descriptive Analysis ----------------------------------------------------
@@ -266,7 +268,7 @@ cv = soybean_data |> group_by(id) |> summarise(cv(kgha))
 
 # Modeling ----------------------------------------------------------------
 
-# linear model
+# linear model 1
 mod1.lm <- lm(formula = kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data)
 summary(mod1.lm)
 plot(mod1.lm)
@@ -277,83 +279,64 @@ lambda <- bc$x[which.max(bc$y)]
 soybean_data$kghaT <- (soybean_data$kgha^lambda - 1)/lambda
 
 
-# modelo misto com interações triplas
-mod1.lme <- lme(fixed = kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data,
+
+# modelo misto com interações triplas covars Solo, Ciclo4, Caracteristica
+mod11.lme <- lme(fixed = kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data,
                 random = ~1|Cultivar)
 summary(mod1.lme)
 tseries::jarque.bera.test(residuals(mod1.lme))
 car::leveneTest(residuals(mod1.lme) ~ Cultivar)
-# testando os coeficientes não significantes do mod2.lme
-coefID <- c(7,10,12,13,14,15,16)
-coefNAM <- names(fixef(mod2.lme)[coefID])
-Cmatrix <- matrix(0,7,16)
-Cmatrix[cbind(1:7,coefID)] <- 1
-rownames(Cmatrix) <- coefNAM
-GLH <- multcomp::glht(model = mod1.lme, linfct = Cmatrix)
-summary(GLH) # coeficientes não significativos
 
 
-# modelo misto com interações duplas
-mod2.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
+# mod misto triplo com covars Solo, Ciclo4, Clima
+mod12.lme <- lme(fixed = kgha ~ Solo*Ciclo4*Clima, data = soybean_data,
+                 random = ~1|Cultivar)
+summary(mod11.lme)
+
+
+# mod misto duplo com covars Solo, Ciclo3, Caracteristica
+mod13.lme <- lme(fixed = kgha ~ Solo*Ciclo3*Caracteristica, data = soybean_data,
+                 random = ~1|Cultivar)
+summary(mod11.lme)
+
+
+# mod misto duplo com covars Solo, Ciclo3, Clima
+mod14.lme <- lme(fixed = kgha ~ Solo*Ciclo3*Clima, data = soybean_data,
+                 random = ~1|Cultivar)
+summary(mod11.lme)
+
+
+
+# modelo misto duplo com covars Solo, Ciclo4, Caracteristica
+mod21.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
                 data = soybean_data, random = ~1|Cultivar)
 summary(mod2.lme)
 tseries::jarque.bera.test(residuals(mod2.lme))
 car::leveneTest(residuals(mod2.lme) ~ Cultivar)
-# testando os coeficientes não significantes do mod2.lme
-coefID <- c(7,10,12,13)
-coefNAM <- names(fixef(mod2.lme)[coefID])
-Cmatrix <- matrix(0,4,13)
-Cmatrix[cbind(1:4,coefID)] <- 1
-rownames(Cmatrix) <- coefNAM
-GLH <- multcomp::glht(model = mod2.lme, linfct = Cmatrix)
-summary(GLH) # coeficientes não significativos
 
 
-# modelo misto sem interação dupla do Solo com Característica
-mod3.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Ciclo4*Caracteristica, 
-                data = soybean_data, random = ~1|Cultivar)
-summary(mod3.lme)
-tseries::jarque.bera.test(residuals(mod3.lme))
-car::leveneTest(residuals(mod3.lme) ~ soybean_data$Cultivar)
-# testando os coeficientes não significantes do mod3.lme
-coefID <- c(7,11,12)
-coefNAM <- names(fixef(mod3.lme)[coefID])
-Cmatrix <- matrix(0,3,12)
-Cmatrix[cbind(1:3,coefID)] <- 1
-rownames(Cmatrix) <- coefNAM
-GLH <- multcomp::glht(model = mod3.lme, linfct = Cmatrix)
-summary(GLH) # coeficientes não significativos
+# mod misto duplo com covars Solo, Ciclo4, Clima
+mod22.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Clima + Ciclo4*Clima,
+                 data = soybean_data, random = ~1|Cultivar)
+summary(mod21.lme)
+shapiro.test(resid(mod21.lme))
 
 
-# modelo misto com covar de Grupo
-mod4.lme <- lme(fixed = log(log(kgha)) ~ Grupo, data = soybean_data, random = ~1|Cultivar)
-summary(mod4.lme)
-tseries::jarque.bera.test(residuals(mod4.lme))
-shapiro.test(resid(mod4.lme))
-car::leveneTest(residuals(mod4.lme) ~ soybean_data$Cultivar)
-# testando os coeficientes não significantes do mod4.lme
-coefID <- c(4,8)
-coefNAM <- names(fixef(mod4.lme)[coefID])
-Cmatrix <- matrix(0,2,16)
-Cmatrix[cbind(1:2,coefID)] <- 1
-rownames(Cmatrix) <- coefNAM
-GLH <- multcomp::glht(model = mod4.lme, linfct = Cmatrix)
-summary(GLH) # coeficientes não significativos
+# mod misto duplo com covars Solo, Ciclo3, Caracteristica
+mod23.lme <- lme(fixed = kgha ~ Solo*Ciclo3 + Solo*Caracteristica + Ciclo3*Caracteristica,
+                 data = soybean_data, random = ~1|Cultivar)
+summary(mod22.lme)
+shapiro.test(resid(mod22.lme))
 
 
-# mod gls com interação tripla e variância no Cultivar
-mod1.gls <- gls(model = kgha ~ Solo*Ciclo4*Caracteristica, 
-                data = soybean_data, weights = varIdent(form = ~1|Cultivar))
-summary(mod1.gls)
-boxplot(resid(mod1.gls, type = "normalized") ~ soybean_data$Cultivar, xlab="Cultivar", ylab="Resíduos")
-tseries::jarque.bera.test(residuals(mod1.gls))
+# mod misto duplo com covars Solo, Ciclo3, Clima
+mod24.lme <- lme(fixed = kgha ~ Solo*Ciclo3 + Solo*Clima + Ciclo3*Clima,
+                 data = soybean_data, random = ~1|Cultivar)
+summary(mod23.lme)
+shapiro.test(resid(mod23.lme))
 
 
-# mod gls com covar de Grupo e variância no Cultivar
-mod2.gls <- gls(model = kgha ~ Grupo, data = soybean_data, weights = varIdent(form = ~1|Cultivar))
-summary(mod2.gls)
-boxplot(resid(mod2.gls, type = "normalized") ~ soybean_data$Cultivar, xlab="Cultivar", ylab="Resíduos")
-tseries::jarque.bera.test(residuals(mod2.gls))
+
 
 
 
@@ -382,20 +365,6 @@ Cmatrix <- matrix(0,3,12)
 Cmatrix[cbind(1:3,coefID)] <- 1
 rownames(Cmatrix) <- coefNAM
 GLH <- multcomp::glht(model = mod3.lme, linfct = Cmatrix)
-summary(GLH) # não significativos
-
-
-# obtendo as esperanças do modelo 3
-sum(mod3.lme$coefficients$fixed[c(1)])
-
-
-# testando os não significativos do mod4
-coefID <- c(4,8)
-coefNAM <- names(fixef(mod4.lme)[coefID])
-Cmatrix <- matrix(0,2,16)
-Cmatrix[cbind(1:2,coefID)] <- 1
-rownames(Cmatrix) <- coefNAM
-GLH <- multcomp::glht(model = mod4.lme, linfct = Cmatrix)
 summary(GLH) # não significativos
 
 
@@ -459,35 +428,5 @@ plot(mod5.gls, Cultivar~resid(., type = "p"), abline = 0, xlim = c(-4.5,4.5))
 plot(mod5.gls, resid(., type = "p")~fitted(.)|Solo)
 
 
-# MODELO 3 
-
-# Resíduos vs Valores Ajustados
-plot(mod3.lme)
-# Q-Qplot dos resíduos
-qqnorm(mod3.lme)
-# plot do ajustado pelo observado
-plot(mod3.lme, kgha ~ fitted(.))
-# Q-Qplot dos efeitos aleatórios
-qqnorm(mod3.lme, ~ranef(.))
-# boxplot dos resíduos por Cultivar
-plot(mod3.lme, Cultivar~resid(., type = "p"), abline = 0)
-# Resíduos vs Valores Ajustados por Solo
-plot(mod3.lme, resid(., type = "p")~fitted(.)|Solo)
-
-
-
+# pacote de gráficos de diagnóstico de modelos
 sjPlot::plot_model(mod4.lme, type = "diag")
-
-
-
-
-# Codes Testing -----------------------------------------------------------------
-
-
-ks.test(x = kgha, y = "pt")
-
-qqplot(qt(ppoints(1000),df=987), kgha, cex=0.6,pch=19,
-       main="QQplot para t-Student",
-       xlab="t-Student")
-qqline(kgha,distribution= function(p)qt(p,df=987),
-       prob=c(0.1,0.6),col=2)
