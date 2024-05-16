@@ -143,43 +143,11 @@ soybean_data <- soybean_data |>
                                           "G10", "G11", "G12", "G13", "G14", "G15", "G16")))
   
 
-# row number
-# soybean_data <- soybean_data |> mutate(nrow = 1:nrow(soybean_data))
-# # find outliers function
-# findoutlier <- function(x) {
-#   return(x < quantile(x, .25) - 1.5*IQR(x) | x > quantile(x, .75) + 1.5*IQR(x))
-# }
-# # applying find outliers function in groupped observations
-# soybean_data <- soybean_data %>%
-#   group_by(Caracteristica, Solo, Ciclo4) %>%
-#   mutate(outlier = ifelse(findoutlier(kgha), numer, NA))
-# # filtrando os indíviduos suspeitos de serem outliers
-# filtered_data <- soybean_data |>
-#   filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "BMXBonus") |>
-#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "RK7518IPRO")) |>
-#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "BMXExtremaIPRO")) |>
-#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "BRSGO7755RR"))|>
-#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "CZ37B43IPRO")) |>
-#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "DM80I79IPRO"))|>
-#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "DM82I78IPRO")) |>
-#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "P98Y21IPRO"))  |>
-#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Plintossolo" & Cultivar == "CZ37B43IPRO"))|>
-#   bind_rows(soybean_data |> filter(Ano == 2020 & Solo == "Latossolo" & Cultivar == "M8644IPRO")) |>
-#   bind_rows(soybean_data |> filter(Ano == 2020 & Solo == "Latossolo" & Cultivar == "M8644IPRO"))|>
-#   bind_rows(soybean_data |> filter(Ano == 2020 & Solo == "Latossolo" & Cultivar == "W791")) |>
-#   bind_rows(soybean_data |> filter(Local == "Aparecida do Rio Negro" & Ano == 2018 & Solo == "Latossolo" & Cultivar == "BRS230068"))
-# write.csv(x = filtered_data, file = "Produtividade_Soja_Outliers.csv")
-# outliers <- c(240,325,250,252,265,269,285,289,316,374,498,499,547,770)
-
-# excluding outliers from the dataset
-# soybean_data <- soybean_data[-c(265, 289, 316, 374, 770),]
-
-
 # Descriptive Analysis ----------------------------------------------------
 
 attach(soybean_data)
 
-##### Densidade por tipo de Solo #####
+##### Densidade por tipo de SOLO
 sample_size = soybean_data %>% group_by(Solo) %>% summarize(num=n())
 
 soybean_data %>%
@@ -187,8 +155,6 @@ soybean_data %>%
   mutate(myaxis = paste0(Solo, "\n", "n=", num)) %>%
   ggplot(aes(x=myaxis, y=kgha)) +
   geom_violin(width=1.4, aes(fill = Solo)) +
-  # scale_fill_viridis(discrete = TRUE) +
-  # theme_ipsum() +
   theme(
     legend.position="none",
     plot.title = element_text(size=11)
@@ -196,34 +162,45 @@ soybean_data %>%
   ggtitle("Densidade da produtividade de Soja por Solo") +
   xlab("")
 
-##### Densidade por ANO #####
-sample_size = soybean_data %>% group_by(Ano) %>% summarize(num=n())
+
+##### Densidade por CLIMA
+sample_size = soybean_data %>% group_by(Clima) %>% summarize(num=n())
 
 soybean_data %>%
   left_join(sample_size) %>%
-  mutate(myaxis = paste0(Ano, "\n", "n=", num)) %>%
-  ggplot(aes(x=myaxis, y=kgha, fill=Ano)) +
+  mutate(myaxis = paste0(Clima, "\n", "n=", num)) %>%
+  ggplot(aes(x=myaxis, y=kgha, fill=Clima)) +
   geom_violin(width=1.4) +
-  # scale_fill_viridis(discrete = TRUE) +
-  # theme_ipsum() +
   theme(
     legend.position="none",
     plot.title = element_text(size=11)
   ) +
-  ggtitle("Densidade da produtividade de Soja por Ano") +
+  ggtitle("Densidade da produtividade de Soja por Característica Climática") +
   xlab("")
 
-##### Densidade por Grupo do Ciclo #####
-soybean_data |>
-  ggplot(mapping = aes(x = Ciclo4, y = kgha)) +
-  geom_violin()
 
-##### Densidade por Grupo do Ciclo e SOLO #####
-sample_size = soybean_data %>% group_by(Ciclo4, Caracteristica) %>% summarize(num=n())
+##### Densidade por CICLO
+sample_size = soybean_data %>% group_by(Ciclo4) %>% summarize(num=n())
 
 soybean_data %>%
   left_join(sample_size) %>%
-  mutate(myaxis = paste0(Ciclo4, "\n", Caracteristica, "\n", "n=", num)) %>%
+  mutate(myaxis = paste0(Ciclo4, "\n", "n=", num)) %>%
+  ggplot(aes(x=myaxis, y=kgha, fill=Ciclo4)) +
+  geom_violin(width=1.4) +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Densidade da produtividade de Soja por Característica Climática") +
+  xlab("")
+
+
+##### Densidade por CICLO e CLIMA
+sample_size = soybean_data %>% group_by(Ciclo4, Clima) %>% summarize(num=n())
+
+soybean_data %>%
+  left_join(sample_size) %>%
+  mutate(myaxis = paste0(Ciclo4, "\n", Clima, "\n", "n=", num)) %>%
   ggplot(aes(x=myaxis, y=kgha)) +
   geom_violin(width=1.4, aes(fill = Solo)) +
   # scale_fill_viridis(discrete = TRUE) +
@@ -236,31 +213,28 @@ soybean_data %>%
   xlab("")
 
 
-##### perfil médio dos Solos ####
-g1 <- ggplot(data = soybean_data, mapping = aes(x = Ciclo, y = kgha)) +
-  stat_summary(aes(colour = Car, linetype = Solo), fun = "mean", geom = "line") + 
+##### perfil médio dos tipos Solos
+ggplot(data = soybean_data, mapping = aes(x = Ano, y = kgha)) +
+  stat_summary(aes(colour = Solo), fun = "mean", geom = "line") + 
   theme_light()
 
-##### perfil médio da Caracteristica ####
-g2 <- ggplot(data = soybean_data, mapping = aes(x = Ciclo, y = kgha)) +
-  stat_summary(aes(colour = Caracteristica), fun = "mean", geom = "line") + 
+
+##### perfil médio do Ciclo de Colheita
+ggplot(data = soybean_data, mapping = aes(x = Ano, y = kgha)) +
+  stat_summary(aes(colour = Ciclo4), fun = "mean", geom = "line") + 
   theme_light()
 
-##### perfil médio do Grupo 4 do Ciclo de Maturidade ####
-g3 <- ggplot(data = soybean_data, mapping = aes(x = Ano, y = kgha)) +
-  stat_summary(fun = "mean", geom = "line", aes(colour = Ciclo4)) +
-  scale_x_continuous(breaks = unique(Ano)) +
-  scale_color_brewer(palette="Set1") + theme_light()
 
+# boxplot dos 95 níveis de Cultivar
 ggplot(soybean_data, aes(x = Cultivar, y = kgha)) + 
   geom_boxplot() + theme_light() + theme(axis.text.x = element_blank())
 
-ggplot(soybean_data, aes(x = Caracteristica, y = kgha)) + 
-  geom_violin() + theme_light()
 
+# gráfico em painéis por Solo e Ciclo
 ggplot(soybean_data, aes(x = Caracteristica, y = kgha)) + 
   geom_boxplot() + facet_grid(Solo~Ciclo4) +
   theme_light()
+
 
 # coeficiente de variacao por experimento
 cv = soybean_data |> group_by(id) |> summarise(cv(kgha))
@@ -283,88 +257,107 @@ soybean_data$kghaT <- (soybean_data$kgha^lambda - 1)/lambda
 # modelo misto com interações triplas covars Solo, Ciclo4, Caracteristica
 mod11.lme <- lme(fixed = kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data,
                 random = ~1|Cultivar)
-summary(mod1.lme)
-tseries::jarque.bera.test(residuals(mod1.lme))
-car::leveneTest(residuals(mod1.lme) ~ Cultivar)
+summary(mod11.lme)
+shapiro.test(residuals(mod11.lme, type = "normalized"))
+tseries::jarque.bera.test(residuals(mod11.lme, type = "normalized"))
+car::leveneTest(residuals(mod11.lme) ~ Cultivar)
 
 
 # mod misto triplo com covars Solo, Ciclo4, Clima
 mod12.lme <- lme(fixed = kgha ~ Solo*Ciclo4*Clima, data = soybean_data,
                  random = ~1|Cultivar)
-summary(mod11.lme)
+summary(mod12.lme)
+shapiro.test(residuals(mod12.lme, type = "pearson"))
 
 
-# mod misto duplo com covars Solo, Ciclo3, Caracteristica
+# mod misto triplo com covars Solo, Ciclo3, Caracteristica
 mod13.lme <- lme(fixed = kgha ~ Solo*Ciclo3*Caracteristica, data = soybean_data,
                  random = ~1|Cultivar)
-summary(mod11.lme)
+summary(mod13.lme)
+shapiro.test(residuals(mod13.lme, type = "pearson"))
 
 
-# mod misto duplo com covars Solo, Ciclo3, Clima
+# mod misto triplo com covars Solo, Ciclo3, Clima
 mod14.lme <- lme(fixed = kgha ~ Solo*Ciclo3*Clima, data = soybean_data,
                  random = ~1|Cultivar)
-summary(mod11.lme)
-
+summary(mod14.lme)
+shapiro.test(residuals(mod14.lme, type = "pearson"))
 
 
 # modelo misto duplo com covars Solo, Ciclo4, Caracteristica
 mod21.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
                 data = soybean_data, random = ~1|Cultivar)
-summary(mod2.lme)
-tseries::jarque.bera.test(residuals(mod2.lme))
-car::leveneTest(residuals(mod2.lme) ~ Cultivar)
+summary(mod21.lme)
+shapiro.test(residuals(mod21.lme, type = "pearson"))
+tseries::jarque.bera.test(residuals(mod21.lme, type = "pearson"))
+car::leveneTest(residuals(mod21.lme) ~ Cultivar)
 
 
 # mod misto duplo com covars Solo, Ciclo4, Clima
 mod22.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Clima + Ciclo4*Clima,
                  data = soybean_data, random = ~1|Cultivar)
-summary(mod21.lme)
-shapiro.test(resid(mod21.lme))
+summary(mod22.lme)
+shapiro.test(residuals(mod22.lme, type = "pearson"))
 
 
 # mod misto duplo com covars Solo, Ciclo3, Caracteristica
 mod23.lme <- lme(fixed = kgha ~ Solo*Ciclo3 + Solo*Caracteristica + Ciclo3*Caracteristica,
                  data = soybean_data, random = ~1|Cultivar)
-summary(mod22.lme)
-shapiro.test(resid(mod22.lme))
+summary(mod23.lme)
+shapiro.test(residuals(mod23.lme, type = "pearson"))
 
 
-# mod misto duplo com covars Solo, Ciclo3, Clima
+# mod misto duplo com covars Solo, Ciclo3, Clima ----- melhor em termos de coeficiente
 mod24.lme <- lme(fixed = kgha ~ Solo*Ciclo3 + Solo*Clima + Ciclo3*Clima,
                  data = soybean_data, random = ~1|Cultivar)
-summary(mod23.lme)
-shapiro.test(resid(mod23.lme))
+summary(mod24.lme)
+shapiro.test(residuals(object = mod24.lme, type = "pearson"))
 
 
+# mod gls duplo covars Solo, Ciclo4, Caracteristica
+mod1.gls <- gls(model = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
+                data = soybean_data, weights = varIdent(form = ~1|Cultivar))
+summary(mod1.gls)
+tseries::jarque.bera.test(residuals(object = mod1.gls, type = "pearson"))
+shapiro.test(residuals(object = mod1.gls, type = "pearson"))
+boxplot(resid(mod1.gls, type = "normalized") ~ Cultivar,
+        xlab="Cultivar", ylab="Resíduos", main="Modelo GLS triplo Var no Cultivar")
 
+
+# mod gls duplo covars Solo, Ciclo3, Clima
+mod2.gls <- gls(model = kgha ~ Solo*Ciclo3 + Solo*Clima + Ciclo3*Clima, 
+                data = soybean_data, weights = varIdent(form = ~1|Cultivar))
+summary(mod2.gls)
+tseries::jarque.bera.test(residuals(object = mod2.gls, type = "normalized"))
+shapiro.test(residuals(object = mod2.gls, type = "pearson"))
+boxplot(resid(mod2.gls, type = "normalized") ~ Cultivar,
+        xlab="Cultivar", ylab="Resíduos", main="Modelo GLS triplo Var no Cultivar")
 
 
 
 # Hypothesis Testing -------------------------------------------------------
 
 
-# testando os não significantes do mod2
+# testando os não significantes do mod24.lme
 # id dos coeficientes a serem testados
-coefID <- c(7,10,12,13)
-coefNAM <- names(fixef(mod2.lme)[coefID])
-
+coefID <- c(7,10,11,14)
+coefNAM <- names(fixef(mod24.lme)[coefID])
 # matriz de contrastes
-Cmatrix <- matrix(0, 4, 13)
+Cmatrix <- matrix(0, 4, 14)
 Cmatrix[cbind(1:4,coefID)] <- 1
 rownames(Cmatrix) <- coefNAM
-
 # TESTE DA HIPÓTESE LINEAR GERAL PARA 𝑯𝟎: 𝐂𝜷 = 0
-GLH <-  multcomp::glht(model = mod2.lme, linfct = Cmatrix)
+GLH <-  multcomp::glht(model = mod24.lme, linfct = Cmatrix)
 summary(GLH) # não significativos
 
 
-# testando os não significativos do mod3
-coefID <- c(7,11,12)
-coefNAM <- names(fixef(mod3.lme)[coefID])
-Cmatrix <- matrix(0,3,12)
-Cmatrix[cbind(1:3,coefID)] <- 1
+# testando os não significativos do mod21.lme
+coefID <- c(7,10,12,13)
+coefNAM <- names(fixef(mod21.lme)[coefID])
+Cmatrix <- matrix(0,4,13)
+Cmatrix[cbind(1:4,coefID)] <- 1
 rownames(Cmatrix) <- coefNAM
-GLH <- multcomp::glht(model = mod3.lme, linfct = Cmatrix)
+GLH <- multcomp::glht(model = mod21.lme, linfct = Cmatrix)
 summary(GLH) # não significativos
 
 
@@ -378,55 +371,56 @@ GLH <- multcomp::glht(model = mod1.gls, linfct = Cmatrix)
 summary(GLH)
 
 
+
 # Model Diagnosis -----------------------------------------------------
 
 
-# MODELO 4 
+# MODELO mod24.lme 
 
 # Resíduos vs Valores Ajustados
-plot(mod4.lme)
+plot(mod24.lme)
 # Q-Qplot dos resíduos
-qqnorm(mod4.lme)
+qqnorm(mod24.lme)
 # plot do ajustado pelo observado
-plot(mod4.lme, kgha ~ fitted(.))
+plot(mod24.lme, kgha ~ fitted(.))
 # Q-Qplot dos efeitos aleatórios
-qqnorm(mod4.lme, ~ranef(.))
+qqnorm(mod24.lme, ~ranef(.))
 # boxplot dos resíduos por Cultivar
-plot(mod4.lme, Cultivar~resid(., type = "p"), abline = 0, xlim = c(-4.5,4.5))
+plot(mod24.lme, Cultivar~resid(., type = "p"), abline = 0, xlim = c(-4.5,4.5))
 # Resíduos vs Valores Ajustados por Solo
-plot(mod4.lme, resid(., type = "p")~fitted(.)|Solo)
+plot(mod24.lme, resid(., type = "p")~fitted(.)|Solo)
 
-
-# tests against heteroskedasticity to mod4
-residuos <- residuals(mod4.lme)
+# tests against heteroskedasticity to mod24.lme
+residuos <- residuals(object = mod24.lme, type = "pearson")
 lmtest::bptest(residuos~Grupo, studentize = FALSE)
 bartlett.test(residuos ~ soybean_data$Grupo)
-car::leveneTest(residuals(mod4.lme) ~ soybean_data$Grupo)
-shapiro.test(residuals(mod4.lme))
-tseries::jarque.bera.test(residuals(mod4.lme))
-
-# tests against heteroskedasticity to mod5
-bartlett.test(residuals(mod5.gls) ~ soybean_data$Grupo)
-lmtest::bptest(residuals(mod5.gls) ~ soybean_data$Grupo, studentize = FALSE)
-car::leveneTest(residuals(mod5.gls) ~ soybean_data$Grupo)
-shapiro.test(residuals(mod5.gls))
-
-
-# MODELO 5 
-
-# Resíduos vs Valores Ajustados
-plot(mod5.gls)
-# Q-Qplot dos resíduos
-qqnorm(mod5.gls)
-# plot do ajustado pelo observado
-plot(mod5.gls, kgha ~ fitted(.))
-# Q-Qplot dos efeitos aleatórios
-qqnorm(mod5.gls, ~ranef(.))
-# boxplot dos resíduos por Cultivar
-plot(mod5.gls, Cultivar~resid(., type = "p"), abline = 0, xlim = c(-4.5,4.5))
-# Resíduos vs Valores Ajustados por Solo
-plot(mod5.gls, resid(., type = "p")~fitted(.)|Solo)
-
+car::leveneTest(residuals(mod24.lme) ~ soybean_data$Grupo)
+shapiro.test(residuals(mod24.lme))
+tseries::jarque.bera.test(residuals(mod24.lme))
 
 # pacote de gráficos de diagnóstico de modelos
-sjPlot::plot_model(mod4.lme, type = "diag")
+sjPlot::plot_model(mod24.lme, type = "diag")
+
+
+# MODELO mod21.lme 
+
+# Resíduos vs Valores Ajustados
+plot(mod21.lme)
+# Q-Qplot dos resíduos
+qqnorm(mod21.lme)
+# plot do ajustado pelo observado
+plot(mod21.lme, kgha ~ fitted(.))
+# Q-Qplot dos efeitos aleatórios
+qqnorm(mod21.lme, ~ranef(.))
+# boxplot dos resíduos por Cultivar
+plot(mod21.lme, Cultivar~resid(., type = "p"), abline = 0, xlim = c(-4.5,4.5))
+# Resíduos vs Valores Ajustados por Solo
+plot(mod21.lme, resid(., type = "p")~fitted(.)|Solo)
+
+# tests against heteroskedasticity to mod5
+bartlett.test(residuals(mod21.lme) ~ soybean_data$Grupo)
+lmtest::bptest(residuals(mod21.lme) ~ soybean_data$Grupo, studentize = FALSE)
+car::leveneTest(residuals(mod21.lme) ~ soybean_data$Grupo)
+shapiro.test(residuals(mod21.lme))
+
+
