@@ -240,7 +240,9 @@ ggplot(soybean_data, aes(x = Caracteristica, y = kgha)) +
 cv = soybean_data |> group_by(id) |> summarise(cv(kgha))
 
 
-# Modeling ----------------------------------------------------------------
+
+# Regression Models -------------------------------------------------------
+
 
 # linear model 1
 mod1.lm <- lm(formula = kgha ~ Solo*Ciclo4*Caracteristica, data = soybean_data)
