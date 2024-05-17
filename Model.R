@@ -1,5 +1,42 @@
 # Script para testes da modelagem do problema
 
+
+# FINDING OUTLIERS
+
+# row number
+# soybean_data <- soybean_data |> mutate(nrow = 1:nrow(soybean_data))
+# # find outliers function
+# findoutlier <- function(x) {
+#   return(x < quantile(x, .25) - 1.5*IQR(x) | x > quantile(x, .75) + 1.5*IQR(x))
+# }
+# # applying find outliers function in groupped observations
+# soybean_data <- soybean_data %>%
+#   group_by(Caracteristica, Solo, Ciclo4) %>%
+#   mutate(outlier = ifelse(findoutlier(kgha), numer, NA))
+# # filtrando os indíviduos suspeitos de serem outliers
+# filtered_data <- soybean_data |>
+#   filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "BMXBonus") |>
+#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "RK7518IPRO")) |>
+#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "BMXExtremaIPRO")) |>
+#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "BRSGO7755RR"))|>
+#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "CZ37B43IPRO")) |>
+#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "DM80I79IPRO"))|>
+#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "DM82I78IPRO")) |>
+#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Latossolo" & Cultivar == "P98Y21IPRO"))  |>
+#   bind_rows(soybean_data |> filter(Ano == 2021 & Solo == "Plintossolo" & Cultivar == "CZ37B43IPRO"))|>
+#   bind_rows(soybean_data |> filter(Ano == 2020 & Solo == "Latossolo" & Cultivar == "M8644IPRO")) |>
+#   bind_rows(soybean_data |> filter(Ano == 2020 & Solo == "Latossolo" & Cultivar == "M8644IPRO"))|>
+#   bind_rows(soybean_data |> filter(Ano == 2020 & Solo == "Latossolo" & Cultivar == "W791")) |>
+#   bind_rows(soybean_data |> filter(Local == "Aparecida do Rio Negro" & Ano == 2018 & Solo == "Latossolo" & Cultivar == "BRS230068"))
+# write.csv(x = filtered_data, file = "Produtividade_Soja_Outliers.csv")
+# outliers <- c(240,325,250,252,265,269,285,289,316,374,498,499,547,770)
+
+# excluding outliers from the dataset
+# soybean_data <- soybean_data[-c(265, 289, 316, 374, 770),]
+
+
+
+
 ##### Novas covariáveis para modelagem #####
 
 # para ajuste do modelo misto 4 e mod misto 8
