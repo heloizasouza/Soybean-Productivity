@@ -7,6 +7,8 @@ library(tidyverse)
 library(sp)
 library(nlme)
 library(lme4)
+library(rpart)
+library(rpart.plot)
 
 # Data Treatment ----------------------------------------------------------
 
@@ -92,9 +94,8 @@ soybean_data <- soybean_data |>
     year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 3 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1,0.2),
   )) |>
   mutate(Caracteristica = cut(Temp, breaks = c(-2, -0.5, 0.5), labels = c("LaNina", "Neutro"))) |>
-  mutate(Clima = cut(Temp, breaks = c(-1.5,-1.0,-0.5,0.5), 
-                     labels = c("ModerLaNina","FracoLaNina","Neutro"))) |>
-  mutate(Clima = ordered(Clima, levels = c("Neutro", "FracoLaNina", "ModerLaNina")))
+  mutate(Clima = as.factor(cut(Temp, breaks = c(-1.5,-1.0,-0.5,0.5), 
+                               labels = c("ModerLaNina","FracoLaNina","Neutro"))))
 
 # creating Group variable of interactions Solo, Ciclo and Caracteristica
 soybean_data <- soybean_data |>
@@ -426,3 +427,23 @@ car::leveneTest(residuals(mod21.lme) ~ soybean_data$Grupo)
 shapiro.test(residuals(mod21.lme))
 
 
+
+# Classification Models ---------------------------------------------------
+
+# Spliting the data into training and test datasets
+set.seed(25)
+trainId <- sample(x = 1:nrow(soybean_data), size = nrow(soybean_data)*0.7)
+train.dt <- soybean_data[trainId,]
+test.dt <- soybean_data[-trainId,]
+
+
+# mod1 decision tree model with y = Solo
+mod1.dt <- rpart(formula = Solo ~ kgha + Ciclo4 + Clima, data = train.dt,
+                 method = "class")
+
+# decision tree plot
+rpart.plot(x = mod1.dt, type = 1)
+
+mod1.dt$variable.importance
+
+  
