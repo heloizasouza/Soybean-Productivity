@@ -15,139 +15,17 @@ library(rpart.plot)
 
 # loading the final transformed data
 soybean_data <- read.csv(file = "data_join.csv")
+attach(soybean_data)
 
-
-# loading principal data file
-main_data <- read_excel("Data/Dados - Produtividade em Latossolo e Plintossolo - 2018 a 2023.xlsx")
-# correcting col names
-colnames(main_data) <- gsub(pattern = '\\s', replacement = '\\_', x = names(main_data))
-
-soybean_data <- main_data |>
-  # removing accents
-  # removendo acentos
-  mutate_at(vars(Local, Textura_do_solo, Cultivar), 
-            ~stringi::stri_trans_general(.,"Latin-ASCII")) |>
-  # transforming categorical variables
-  # transformando variáveis categóricas
-  mutate_at(vars(Local,Solo,Cultivar, Textura_do_solo), as.factor) |>
-  mutate(Anoc = as.factor(Ano)) |>
-  #transforming the Date covariate
-  # transformando a covariável de Data
-  mutate_at(vars(Plantio), as.Date)
-  
-
-# correcting coordinates
 soybean_data <- soybean_data |>
-  separate(Lat._e_Long., into = c("Latit", "Longit"), sep = ";") |>
-  mutate(Latit = case_when(
-    Local == "Pium" ~ "10°12' 58'' S",
-    Local == "Paraiso do Tocantins" ~ "10°11' 16.9'' S",
-    Local == "Pedro Afonso" ~ "08°58' 03'' S",
-    Local == "Aparecida do Rio Negro" ~ "09°57' 07'' S",
-    Local == "Lagoa da Confusao" ~ "10°47' 37'' S",
-    TRUE ~ as.character(Latit)
-  ),
-  Longit = case_when(
-    Local == "Pium" ~ "49°15' 1.4'' W",
-    Local == "Paraiso do Tocantins" ~ "48°40' 54.6'' W",
-    Local == "Goiania" ~ "49°30' 11'' W",
-    Local == "Pedro Afonso" ~ "48°10' 29'' W",
-    Local == "Aparecida do Rio Negro" ~ "47°58' 19'' W",
-    Local == "Lagoa da Confusao" ~ "49°37' 25'' W",
-    TRUE ~ as.character(Longit)
-  )) |>
-  mutate(Latitude = char2dms(from = Latit,chd = "°", chm = "'", chs = "''") 
-         |> as.numeric()) |>
-  mutate(Longitude = char2dms(from = Longit,chd = "°", chm = "'", chs = "''")
-         |> as.numeric())
+  mutate(Solo = as.factor(Solo), Cultivar = as.factor(Cultivar),
+         Caracteristica = as.factor(Caracteristica), 
+         Clima = factor(x=Clima, levels=c("ModerLaNina","FracoLaNina","Neutro")),
+         Ciclo3 = factor(x=Ciclo3, levels=c("Precoce","Medio","Tardio")), 
+         Ciclo4 = factor(x=Ciclo4, levels=c("Super Precoce","Precoce","Medio","Tardio")))
 
-# correcting planting dates
-# corrigindo as datas de plantio
-soybean_data <- soybean_data |>
-  mutate(Plantio = case_when(
-    Plantio == "2022-01-17" ~ as.Date("2022-11-17"),
-    Plantio == "2021-11-23" ~ as.Date("2022-11-23"),
-    TRUE ~ as.Date(Plantio)),
-    Colheita = Plantio+Ciclo)
+levels(soybean_data$Ciclo4)
 
-# creating the harvest cycle categorical covariate
-# criando a covariável categórica de ciclo de colheita
-soybean_data <- soybean_data |>
-  mutate(Ciclo3 = cut(x = Ciclo, breaks = c(-Inf, 105,115,Inf),
-                      labels = c("Precoce","Medio","Tardio"))) |>
-  mutate(Ciclo4 = cut(x = Ciclo, breaks = c(-Inf, 100, 110, 120, Inf), 
-                      labels = c("Super Precoce","Precoce","Medio","Tardio"))) |>
-  # creating an identifier
-  mutate(idCombi = as.factor(paste(Local, Ano, Ciclo, sep = "_")),
-         ID = as.numeric(idCombi))
-
-# creating oceanic season variable
-soybean_data <- soybean_data |>
-  mutate(Temp = case_when(
-    year(Plantio) == 2017 & month(Plantio) == 11 & year(Colheita) == 2018 & month(Colheita) == 3 ~ mean(-0.7,-0.8,-1.0,-0.9,-0.9,-0.7,-0.5),
-    year(Plantio) == 2017 & month(Plantio) == 11 & year(Colheita) == 2018 & month(Colheita) == 4 ~ mean(-0.7,-0.8,-1.0,-0.9,-0.9,-0.7,-0.5,-0.2),
-    year(Plantio) == 2017 & month(Plantio) == 11 & year(Colheita) == 2018 & month(Colheita) == 2 ~ mean(-0.7,-0.8,-1.0,-0.9,-0.9,-0.7),
-    year(Plantio) == 2017 & month(Plantio) == 12 & year(Colheita) == 2018 & month(Colheita) == 3 ~ mean(-0.8,-1.0,-0.9,-0.9,-0.7,-0.5),
-    year(Plantio) == 2017 & month(Plantio) == 12 & year(Colheita) == 2018 & month(Colheita) == 4 ~ mean(-0.8,-1.0,-0.9,-0.9,-0.7,-0.5,-0.2),
-    year(Plantio) == 2019 & month(Plantio) == 11 & year(Colheita) == 2020 & month(Colheita) == 2 ~ mean(0.3,0.5,0.5,0.5,0.5,0.4),
-    year(Plantio) == 2019 & month(Plantio) == 11 & year(Colheita) == 2020 & month(Colheita) == 3 ~ mean(0.3,0.5,0.5,0.5,0.5,0.4,0.2),
-    year(Plantio) == 2020 & month(Plantio) == 11 & year(Colheita) == 2021 & month(Colheita) == 2 ~ mean(-1.2,-1.3,-1.2,-1.0,-0.9,-0.8),
-    year(Plantio) == 2020 & month(Plantio) == 11 & year(Colheita) == 2021 & month(Colheita) == 3 ~ mean(-1.2,-1.3,-1.2,-1.0,-0.9,-0.8,-0.7),
-    year(Plantio) == 2021 & month(Plantio) == 10 & year(Colheita) == 2022 & month(Colheita) == 2 ~ mean(-0.7,-0.8,-1.0,-1.0,-1.0,-0.9,-1.0),
-    year(Plantio) == 2021 & month(Plantio) == 11 & year(Colheita) == 2022 & month(Colheita) == 3 ~ mean(-0.8,-1.0,-1.0,-1.0,-0.9,-1.0,-1.1),
-    year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 2 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1),
-    year(Plantio) == 2022 & month(Plantio) == 11 & year(Colheita) == 2023 & month(Colheita) == 3 ~ mean(-1.0,-0.9,-0.8,-0.7,-0.4,-0.1,0.2),
-  )) |>
-  mutate(Caracteristica = cut(Temp, breaks = c(-2, -0.5, 0.5), labels = c("LaNina", "Neutro"))) |>
-  mutate(Clima = as.factor(cut(Temp, breaks = c(-1.5,-1.0,-0.5,0.5), 
-                               labels = c("ModerLaNina","FracoLaNina","Neutro"))))
-
-# creating Group variable of interactions Solo, Ciclo and Caracteristica
-soybean_data <- soybean_data |>
-  #mutate(tha = kgha/1000) |>
-  mutate(Grupo = case_when(
-    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G2",
-    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G3",
-    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G4",
-    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G5",
-    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G6",
-    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G7",
-    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G8",
-    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G9",
-    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G10",
-    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G11",
-    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G12",
-    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G13",
-    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G14",
-    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G15",
-    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G16",
-    .default = "outro"
-  )) |>
-  mutate(Grupo = factor(Grupo, levels = c("G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9",
-                                          "G10", "G11", "G12", "G13", "G14", "G15", "G16"))) |>
-  mutate(Grupo2 = case_when(
-    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G2",
-    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G3",
-    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G5",
-    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G6",
-    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G1",
-    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G9",
-    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G10",
-    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G11",
-    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G12",
-    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G13",
-    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G14",
-    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G15",
-    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G16",
-    .default = "outro"
-  )) |>
-  mutate(Grupo2 = factor(Grupo2, levels = c("G1", "G2", "G3", "G5", "G6", "G9",
-                                          "G10", "G11", "G12", "G13", "G14", "G15", "G16")))
-  
 
 # Descriptive Analysis ----------------------------------------------------
 
@@ -469,34 +347,62 @@ shapiro.test(residuals(mod21.lme))
 
 # Classification Models ---------------------------------------------------
 
-# Spliting the data into training and test datasets
-set.seed(25)
-trainId <- sample(x = 1:nrow(soybean_data), size = nrow(soybean_data)*0.7)
-train.dt <- soybean_data[trainId,]
-test.dt <- soybean_data[-trainId,]
-
-
 # k-means Unsupervised Learning of soybean produtivity
 set.seed(25)
 km <- kmeans(x = soybean_data[,"kgha"], centers = 3)
 km$size
 km$centers
-soybean_data$km_cluster <- km$cluster
+soybean_data$kgha_km <- factor(km$cluster)
 
+
+# clustering by quantile
 quantile(soybean_data$kgha, probs = seq(0,1,1/3))
-soybean_data <- soybean_data |>
-  mutate(quan_clust = cut(x = kgha, breaks = c(-Inf, 3662, 4453, Inf), 
-                          labels = c(1,2,3)),
-         km_cluster = km$cluster)
+soybean_data$kgha_quant = cut(x = kgha, breaks = c(-Inf, 3662, 4453, Inf), 
+                          labels = FALSE)
 
-# mod1 decision tree model with y = Solo
-mod1.dt <- rpart(formula = Solo ~ kgha + Ciclo4 + Clima, data = train.dt,
-                 method = "class")
+# RANGE da produtividade por cluster
+soybean_data |> select(kgha, kgha_km) |> 
+  group_by(kgha_km) |> summarise_all(.funs = c(min, max))
+
+
+# Spliting the data into training and test datasets
+set.seed(25)
+trainId <- sample(x = 1:nrow(soybean_data), size = nrow(soybean_data)*0.7)
+
+train.dt <- soybean_data |>
+  slice(trainId) 
+
+test.dt <- soybean_data |>
+  slice(-trainId) 
+
+
+# mod decision tree model with y = Solo
+mod1.dt <- rpart(formula = kgha_km ~ Solo + Ciclo4 + Clima, 
+                 data = train.dt, method = "class")
 
 # decision tree plot
 rpart.plot(x = mod1.dt, type = 5)
-
-
 mod1.dt$variable.importance
 
-  
+
+# mod decision tree model with y = Solo
+mod2.dt <- rpart(formula = kgha_km ~ Solo + Ciclo4 + Clima + T2M_MEAN + RH2M_MEAN + WS2M_MEAN, 
+                 data = train.dt, method = "class")
+
+# decision tree plot
+rpart.plot(x = mod2.dt, type = 5)
+mod2.dt$variable.importance
+predictions <- predict(object = mod2.dt, newdata = test.dt, type = "class")
+library(caret)
+CM <- confusionMatrix(data = predictions, reference = test.dt$kgha_km)
+CM
+
+
+# mod floresta aleatória
+library(randomForest)
+mod1.rf <- randomForest(formula = kgha_km ~ Solo + Ciclo4 + T2M_MEAN + RH2M_MEAN + WS2M_MEAN,
+                        data = train.dt, importance = TRUE, ntree = 100)
+mod1.rf$importance
+predictions.rf <- predict(object = mod1.rf, newdata = test.dt)
+CM.rf <- confusionMatrix(data = predictions.rf, reference = test.dt$kgha_km)
+CM.rf
