@@ -12,6 +12,11 @@ library(rpart.plot)
 
 # Data Treatment ----------------------------------------------------------
 
+
+# loading the final transformed data
+soybean_data <- read.csv(file = "data_join.csv")
+
+
 # loading principal data file
 main_data <- read_excel("Data/Dados - Produtividade em Latossolo e Plintossolo - 2018 a 2023.xlsx")
 # correcting col names
@@ -73,8 +78,8 @@ soybean_data <- soybean_data |>
   mutate(Ciclo4 = cut(x = Ciclo, breaks = c(-Inf, 100, 110, 120, Inf), 
                       labels = c("Super Precoce","Precoce","Medio","Tardio"))) |>
   # creating an identifier
-  mutate(idCombi = as.factor(paste(Local, Ano, Ciclo4, sep = "_")),
-         id = as.numeric(idCombi))
+  mutate(idCombi = as.factor(paste(Local, Ano, Ciclo, sep = "_")),
+         ID = as.numeric(idCombi))
 
 # creating oceanic season variable
 soybean_data <- soybean_data |>
@@ -255,6 +260,11 @@ bc <- MASS::boxcox(mod1.lm)
 lambda <- bc$x[which.max(bc$y)]
 soybean_data$kghaT <- (soybean_data$kgha^lambda - 1)/lambda
 
+# mod with new variables
+mod2.lm <- lm(kgha ~ Solo + Ciclo4 + Clima + PRECTOTCORR_MEAN + 
+            T2M_MEAN + WS2M_MEAN + TQV_MEAN, data = DADOS.FINAL)
+summary(mod2.lm)
+shapiro.test(residuals(object = mod2.lm, type = "pearson"))
 
 
 # modelo misto com interações triplas covars Solo, Ciclo4, Caracteristica
@@ -317,6 +327,25 @@ summary(mod24.lme)
 shapiro.test(residuals(object = mod24.lme, type = "pearson"))
 
 
+# mod misto duplo com novas covars climáticas
+mod25.lme <- lme(fixed = kgha ~ Solo*Ciclo4 + Solo*Clima + Solo*RH2M_MEAN +
+                   Solo*T2M_MEAN + Solo*WS2M_MEAN + Ciclo4*Clima + Ciclo4*RH2M_MEAN +
+                   Ciclo4*T2M_MEAN + Ciclo4*WS2M_MEAN + Clima*RH2M_MEAN + 
+                   Clima*T2M_MEAN + Clima*WS2M_MEAN + RH2M_MEAN*T2M_MEAN + 
+                   RH2M_MEAN*WS2M_MEAN + T2M_MEAN*WS2M_MEAN, random = ~1|Cultivar,
+                 data = soybean_data)
+summary(mod25.lme)
+shapiro.test(residuals(object = mod25.lme, type = "pearson"))
+
+
+# mod de efeitos principais com covars climáticas
+mod31.lme <- lme(fixed = kgha ~ Solo + Ciclo4 + Clima + PRECTOTCORR_MEAN + 
+                   T2M_MAX + T2M_MIN + RH2M_MEAN + WS2M_MEAN, 
+                 data = soybean_data, random = ~1|Cultivar)
+summary(mod31.lme)
+shapiro.test(residuals(object = mod31.lme, type = "pearson"))
+
+
 # mod gls duplo covars Solo, Ciclo4, Caracteristica
 mod1.gls <- gls(model = kgha ~ Solo*Ciclo4 + Solo*Caracteristica + Ciclo4*Caracteristica, 
                 data = soybean_data, weights = varIdent(form = ~1|Cultivar))
@@ -336,6 +365,16 @@ shapiro.test(residuals(object = mod2.gls, type = "pearson"))
 boxplot(resid(mod2.gls, type = "normalized") ~ Cultivar,
         xlab="Cultivar", ylab="Resíduos", main="Modelo GLS triplo Var no Cultivar")
 
+
+# mod gls duplo com covars climáticas
+mod3.gls <- gls(model =  kgha ~ Solo*Ciclo4 + Solo*Clima + Solo*RH2M_MEAN +
+                  Solo*T2M_MEAN + Solo*WS2M_MEAN + Ciclo4*Clima + Ciclo4*RH2M_MEAN +
+                  Ciclo4*T2M_MEAN + Ciclo4*WS2M_MEAN + Clima*RH2M_MEAN + 
+                  Clima*T2M_MEAN + Clima*WS2M_MEAN + RH2M_MEAN*T2M_MEAN + 
+                  RH2M_MEAN*WS2M_MEAN + T2M_MEAN*WS2M_MEAN, 
+                data = soybean_data, weights = varIdent(form = ~1|Cultivar))
+summary(mod3.gls)
+shapiro.test(residuals(object = mod3.gls, type = "pearson"))
 
 
 # Hypothesis Testing -------------------------------------------------------
@@ -437,12 +476,26 @@ train.dt <- soybean_data[trainId,]
 test.dt <- soybean_data[-trainId,]
 
 
+# k-means Unsupervised Learning of soybean produtivity
+set.seed(25)
+km <- kmeans(x = soybean_data[,"kgha"], centers = 3)
+km$size
+km$centers
+soybean_data$km_cluster <- km$cluster
+
+quantile(soybean_data$kgha, probs = seq(0,1,1/3))
+soybean_data <- soybean_data |>
+  mutate(quan_clust = cut(x = kgha, breaks = c(-Inf, 3662, 4453, Inf), 
+                          labels = c(1,2,3)),
+         km_cluster = km$cluster)
+
 # mod1 decision tree model with y = Solo
 mod1.dt <- rpart(formula = Solo ~ kgha + Ciclo4 + Clima, data = train.dt,
                  method = "class")
 
 # decision tree plot
-rpart.plot(x = mod1.dt, type = 1)
+rpart.plot(x = mod1.dt, type = 5)
+
 
 mod1.dt$variable.importance
 
