@@ -120,37 +120,16 @@ soybean_data <- soybean_data |>
     .default = "outro"
   )) |>
   mutate(Grupo = factor(Grupo, levels = c("G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9",
-                                          "G10", "G11", "G12", "G13", "G14", "G15", "G16"))) |>
-  mutate(Grupo2 = case_when(
-    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G2",
-    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "LaNina" ~ "G3",
-    Solo == "Plintossolo" & Ciclo4 == "Super Precoce" & Caracteristica == "Neutro" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G5",
-    Solo == "Latossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G6",
-    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "LaNina" ~ "G1",
-    Solo == "Plintossolo" & Ciclo4 == "Precoce" & Caracteristica == "Neutro" ~ "G1",
-    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G9",
-    Solo == "Latossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G10",
-    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "LaNina" ~ "G11",
-    Solo == "Plintossolo" & Ciclo4 == "Medio" & Caracteristica == "Neutro" ~ "G12",
-    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G13",
-    Solo == "Latossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G14",
-    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "LaNina" ~ "G15",
-    Solo == "Plintossolo" & Ciclo4 == "Tardio" & Caracteristica == "Neutro" ~ "G16",
-    .default = "outro"
-  )) |>
-  mutate(Grupo2 = factor(Grupo2, levels = c("G1", "G2", "G3", "G5", "G6", "G9",
-                                            "G10", "G11", "G12", "G13", "G14", "G15", "G16")))
+                                          "G10", "G11", "G12", "G13", "G14", "G15", "G16")))
 
 
 
 # data frame de informações para extração do NASA POWER
 dados <- soybean_data |>
-  select(ID, Latitude, Longitude, Plantio, Colheita) |>
+  select(ID, Ciclo, Latitude, Longitude, Plantio, Colheita) |>
   distinct(ID, .keep_all = TRUE)
 
-
+dados <- arrange(dados, ID)
 
 # NASA POWER RECOMENDADO --------------------------------------------------
 
@@ -180,16 +159,25 @@ env.data <- get_weather(env.id = as.character(dados$id),
 # NASA POWER API ----------------------------------------------------------
 
 
-
-# Exemplo da extração dos dados do NASA POWER usando a API
+# Exemplo da extração dos dados do NASA POWER usando a API para o ID=48
 daily_ag <- get_power(
   community = "ag",
-  lonlat = c(-49.50306,-16.826667),
+  lonlat = c(-48.68183,-10.188028),
   pars = c("T2M", "T2MDEW", "T2M_MAX", "T2M_MIN", "WS2M", "RH2M", "TQV", "PRECTOTCORR"),
-  dates = c("2021-11-20", "2022-03-12"),
+  dates = c("2022-11-17", "2023-02-25"),
   temporal_api = "daily"
 )
 daily_ag
+
+# Exemplo da extração dos dados do NASA POWER usando a API para o ID=55
+daily_ag2 <- get_power(
+  community = "ag",
+  lonlat = c(-48.68183,-10.188028),
+  pars = c("T2M", "T2MDEW", "T2M_MAX", "T2M_MIN", "WS2M", "RH2M", "TQV", "PRECTOTCORR"),
+  dates = c("2022-11-17", "2023-03-07"),
+  temporal_api = "daily"
+)
+daily_ag2
 
 
 # Comando pra ver qual combinação de parâmetros é valida para a função 
@@ -231,47 +219,35 @@ get_nasap_data <- function(id){
                                  "T2M_MAX", "T2M_MIN", "TQV","WS2M"),
                         lonlat = longlat,
                         dates =  datas)
-  nr <- nrow(daily_ag)
+  
+  nr <- dados$Ciclo[which(dados$ID == id)]+1
   daily_ag$ID <- rep(id, nr)
+  
   
   # resumindo a informação do período pra cada id
   dados_resumidos <- daily_ag |> group_by(ID) |> 
-    summarise_at(.vars = vars(ALLSKY_SFC_LW_DWN:WS2M), .funs = list(min, max, mean))
-  
+    summarise_all(.funs = list(min, max, mean))
   dados_resumidos
-  # # conjunto de dados nasa power resumido pro período
-  # NSPOW.DT <- data.frame(id = id, Plantio = dados$Plantio[id], Colheita = dados$Colheita[id],
-  #                        ALLSKY_SFC_LW_DWN_MEAN = mean(daily_ag$ALLSKY_SFC_LW_DWN),
-  #                        ALLSKY_SFC_SW_DWN_MEAN = mean(daily_ag$ALLSKY_SFC_SW_DWN),
-  #                        RH2M_MEAN = mean(daily_ag$RH2M),
-  #                        T2M_MEAN = mean(daily_ag$T2M),
-  #                        T2MDEW_MEAN = mean(daily_ag$T2MDEW),
-  #                        T2M_MAX = max(daily_ag$T2M_MAX),
-  #                        T2M_MIN = min(daily_ag$T2M_MIN),
-  #                        WS2M_MEAN = mean(daily_ag$WS2M))
-  # NSPOW.DT
-
+  
 }
+
 
 # aplicando a função que coleta dos dados da API no vetor de ids
 nasaPowerData <- map_df(dados$ID, get_nasap_data)
 
-# Selecionando e renomeando as variáveis de interesse
+
+# renomeando as colunas pelo nome da função usada
+colnames(nasaPowerData) <- gsub(pattern = '\\_fn1', replacement = '\\_MIN', x = names(nasaPowerData))
+colnames(nasaPowerData) <- gsub(pattern = '\\_fn2', replacement = '\\_MAX', x = names(nasaPowerData))
+colnames(nasaPowerData) <- gsub(pattern = '\\_fn3', replacement = '\\_MEAN', x = names(nasaPowerData))
+
+
+# Selecionando as variáveis de interesse
 new_vars <- nasaPowerData |>
-  select(ID, ALLSKY_SFC_LW_DWN_fn3, ALLSKY_SFC_SW_DWN_fn3, PRECTOTCORR_fn3,
-         RH2M_fn3, T2M_fn3, T2MDEW_fn3, T2M_MAX_fn2, T2M_MIN_fn1, TQV_fn3,
-         WS2M_fn3) |>
-  rename(ID = ID,
-         ALLSKY_SFC_LW_DWN_MEAN = ALLSKY_SFC_LW_DWN_fn3,
-         ALLSKY_SFC_SW_DWN_MEAN = ALLSKY_SFC_SW_DWN_fn3,
-         PRECTOTCORR_MEAN = PRECTOTCORR_fn3,
-         RH2M_MEAN = RH2M_fn3,
-         T2M_MEAN = T2M_fn3,
-         T2MDEW_MEAN = T2MDEW_fn3,
-         T2M_MAX = T2M_MAX_fn2,
-         T2M_MIN = T2M_MIN_fn1,
-         TQV_MEAN = TQV_fn3,
-         WS2M_MEAN = WS2M_fn3)
+  select(ID, ALLSKY_SFC_LW_DWN_MIN:WS2M_MIN,
+         ALLSKY_SFC_LW_DWN_MAX:WS2M_MAX,
+         ALLSKY_SFC_LW_DWN_MEAN:WS2M_MEAN)
+
 
 # fazendo a junção do conjunto de dados original com os dados obtidos da API
 data_join <- left_join(x = soybean_data, y = new_vars, by = "ID")
